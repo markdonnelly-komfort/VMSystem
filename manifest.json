@@ -1,0 +1,22 @@
+{
+  "name": "Komfort Visitor Management",
+  "short_name": "VM System",
+  "description": "Visitor Management System for Komfort Partitioning",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f5f5",
+  "theme_color": "#1a237e",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a237e">
+  <title>Komfort - Visitor Management</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #1a237e;
+      --primary-light: #3949ab;
+      --accent: #ff6f00;
+      --success: #2e7d32;
+      --danger: #c62828;
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --text: #212121;
+      --text-light: #757575;
+      --border: #e0e0e0;
+      --shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .view { display: none; min-height: 100vh; }
+    .view.active { display: flex; flex-direction: column; }
+
+    .header { background: var(--primary); color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 1.3rem; font-weight: 600; }
+    .header-sub { font-size: 0.85rem; opacity: 0.8; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 24px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; gap: 8px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-light); }
+    .btn-accent { background: var(--accent); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+    .btn-outline:hover { background: var(--primary); color: white; }
+    .btn-sm { padding: 8px 16px; font-size: 0.875rem; }
+    .btn-lg { padding: 16px 32px; font-size: 1.2rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-white { background: white; color: var(--primary); }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px;
+      font-size: 1rem; transition: border-color 0.2s; background: white;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; }
+
+    .card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+    .content { flex: 1; overflow-y: auto; padding: 16px; }
+    .center-content { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; }
+
+    .site-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; max-width: 900px; width: 100%; }
+    .site-card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 40px 24px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 3px solid transparent; }
+    .site-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); border-color: var(--primary); }
+    .site-card h2 { font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; }
+    .site-card .count { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .site-card .count-label { color: var(--text-light); font-size: 0.9rem; }
+
+    .kiosk-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 600px; width: 100%; margin: 40px auto; }
+    .kiosk-btn { padding: 40px 24px; border-radius: 16px; font-size: 1.3rem; font-weight: 600; }
+    .kiosk-btn .icon { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+    .search-results { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: white; }
+    .search-result { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+    .search-result:hover { background: #e8eaf6; }
+    .search-result:last-child { border-bottom: none; }
+
+    .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 1.2rem; flex-shrink: 0; overflow: hidden; }
+    .avatar-lg { width: 120px; height: 120px; border-radius: 50%; font-size: 2.5rem; }
+    .avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
+    .people-list { width: 100%; }
+    .people-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .people-row .info { flex: 1; }
+    .people-row .name { font-weight: 600; }
+    .people-row .meta { color: var(--text-light); font-size: 0.85rem; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-employee { background: #e8eaf6; color: var(--primary); }
+    .badge-visitor { background: #fff3e0; color: var(--accent); }
+
+    .camera-container { position: relative; width: 100%; max-width: 400px; margin: 0 auto; }
+    .camera-container video, .camera-container canvas { width: 100%; border-radius: 12px; }
+    .camera-container canvas { display: none; }
+    .camera-actions { display: flex; gap: 12px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+
+    .tabs { display: flex; border-bottom: 2px solid var(--border); background: white; position: sticky; top: 60px; z-index: 99; }
+    .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-weight: 500; color: var(--text-light); border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--bg); font-weight: 600; position: sticky; top: 0; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: white; border-radius: 16px; padding: 24px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { margin-bottom: 16px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+
+    .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 2000; }
+    .toast { padding: 12px 20px; border-radius: 8px; color: white; margin-top: 8px; animation: slideIn 0.3s; font-weight: 500; }
+    .toast-success { background: var(--success); }
+    .toast-error { background: var(--danger); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 16px; background: white; border-bottom: 1px solid var(--border); }
+    .filter-chip { padding: 6px 16px; border-radius: 20px; border: 2px solid var(--border); background: white; cursor: pointer; font-size: 0.9rem; }
+    .filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .logo-text { font-size: 1.5rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; color: var(--primary); }
+    .subtitle { color: var(--text-light); font-size: 1rem; margin-bottom: 40px; }
+    .back-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 4px 8px; margin-right: 8px; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .status-dot.green { background: var(--success); }
+
+    @media (max-width: 600px) {
+      .site-grid { grid-template-columns: 1fr; }
+      .kiosk-actions { grid-template-columns: 1fr; }
+      .header h1 { font-size: 1.1rem; }
+      .kiosk-btn { padding: 30px 20px; font-size: 1.1rem; }
+      .kiosk-btn .icon { font-size: 2rem; }
+    }
+    @media print {
+      .header, .btn, .tabs, .filter-bar, .header-actions { display: none !important; }
+      .view { display: block !important; }
+      .content { padding: 0; }
+      .fire-header-print { display: block !important; text-align: center; margin-bottom: 20px; }
+    }
+    .fire-header-print { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Site Selection (Landing) -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-home" class="view active">
+  <div class="header">
+    <div>
+      <h1>Komfort Visitor Management</h1>
+      <div class="header-sub">Select your location</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-sm btn-white" onclick="showView('view-login')">Admin / Fire Marshal</button>
+    </div>
+  </div>
+  <div class="content center-content">
+    <div class="logo-text">KOMFORT</div>
+    <div class="subtitle">Visitor Management System</div>
+    <div class="site-grid" id="site-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Kiosk (Tablet check-in/out per site) -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-kiosk" class="view">
+  <div class="header">
+    <div style="display:flex;align-items:center;">
+      <button class="back-btn" onclick="showView('view-home')">&larr;</button>
+      <div>
+        <h1 id="kiosk-site-name">Site</h1>
+        <div class="header-sub">Tap to sign in or out</div>
+      </div>
+    </div>
+    <div id="kiosk-count" style="text-align:right;">
+      <div style="font-size:1.5rem;font-weight:700;" id="kiosk-count-num">0</div>
+      <div class="header-sub">on site</div>
+    </div>
+  </div>
+  <div class="content center-content">
+    <div class="kiosk-actions">
+      <button class="btn kiosk-btn btn-success" onclick="startCheckin()">
+        <span class="icon">&#10004;</span>Sign In
+      </button>
+      <button class="btn kiosk-btn btn-danger" onclick="startCheckout()">
+        <span class="icon">&#10008;</span>Sign Out
+      </button>
+    </div>
+    <div class="card" style="width:100%;max-width:600px;margin-top:20px;">
+      <h3 style="margin-bottom:12px;">Currently On Site</h3>
+      <div id="kiosk-people-list" class="people-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Check-in Flow -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-checkin" class="view">
+  <div class="header">
+    <div style="display:flex;align-items:center;">
+      <button class="back-btn" onclick="showView('view-kiosk')">&larr;</button>
+      <div>
+        <h1>Sign In</h1>
+        <div class="header-sub" id="checkin-site-label"></div>
+      </div>
+    </div>
+  </div>
+  <div class="content" style="max-width:600px;margin:0 auto;width:100%;">
+    <div id="checkin-step1" class="card">
+      <h3>Search for your name</h3>
+      <div class="form-group" style="margin-top:12px;">
+        <input type="text" id="checkin-search" placeholder="Start typing your name..." autocomplete="off">
+      </div>
+      <div id="checkin-results" class="search-results" style="display:none;"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <p style="color:var(--text-light);margin-bottom:8px;">First time here?</p>
+        <button class="btn btn-outline" onclick="showRegisterForm()">Register as New</button>
+      </div>
+    </div>
+
+    <div id="checkin-register" class="card" style="display:none;">
+      <h3>New Registration</h3>
+      <div class="form-group" style="margin-top:12px;">
+        <label>I am a:</label>
+        <select id="reg-type">
+          <option value="visitor">Visitor</option>
+          <option value="employee">Employee</option>
+        </select>
+      </div>
+      <div class="form-group"><label>First Name *</label><input type="text" id="reg-first"></div>
+      <div class="form-group"><label>Last Name *</label><input type="text" id="reg-last"></div>
+      <div class="form-group"><label>Company</label><input type="text" id="reg-company"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email"></div>
+      <div class="form-group"><label>Phone</label><input type="tel" id="reg-phone"></div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn btn-outline" onclick="cancelRegister()">Cancel</button>
+        <button class="btn btn-primary" onclick="registerPerson()" style="flex:1;">Register &amp; Continue</button>
+      </div>
+    </div>
+
+    <div id="checkin-step2" class="card" style="display:none;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <div class="avatar avatar-lg" id="checkin-avatar" style="margin:0 auto;"></div>
+        <h3 id="checkin-person-name" style="margin-top:8px;"></h3>
+        <span class="badge" id="checkin-person-type"></span>
+      </div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <button class="btn btn-outline btn-sm" onclick="openCamera()">&#128247; Take / Update Photo</button>
+      </div>
+      <div class="form-group"><label>Host (who are you visiting?)</label><input type="text" id="checkin-host"></div>
+      <div class="form-group"><label>Purpose of visit</label><input type="text" id="checkin-purpose"></div>
+      <button class="btn btn-success btn-lg" style="width:100%;" onclick="completeCheckin()">Complete Sign In</button>
+    </div>
+
+    <div id="checkin-step3" class="card" style="display:none;text-align:center;">
+      <div style="font-size:4rem;color:var(--success);">&#10004;</div>
+      <h2 style="margin:12px 0;">Welcome!</h2>
+      <p id="checkin-confirm-msg" style="font-size:1.1rem;color:var(--text-light);"></p>
+      <button class="btn btn-primary btn-lg" style="margin-top:24px;" onclick="showView('view-kiosk')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Check-out Flow -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-checkout" class="view">
+  <div class="header">
+    <div style="display:flex;align-items:center;">
+      <button class="back-btn" onclick="showView('view-kiosk')">&larr;</button>
+      <div>
+        <h1>Sign Out</h1>
+        <div class="header-sub" id="checkout-site-label"></div>
+      </div>
+    </div>
+  </div>
+  <div class="content" style="max-width:600px;margin:0 auto;width:100%;">
+    <div class="card" id="checkout-card">
+      <h3>Tap your name to sign out</h3>
+      <div id="checkout-list" class="people-list" style="margin-top:12px;"></div>
+      <div id="checkout-empty" style="text-align:center;padding:40px;color:var(--text-light);display:none;">
+        No one is currently signed in.
+      </div>
+    </div>
+    <div id="checkout-confirm" class="card" style="display:none;text-align:center;">
+      <div style="font-size:4rem;color:var(--primary);">&#128075;</div>
+      <h2 style="margin:12px 0;">Goodbye!</h2>
+      <p id="checkout-confirm-msg" style="font-size:1.1rem;color:var(--text-light);"></p>
+      <button class="btn btn-primary btn-lg" style="margin-top:24px;" onclick="showView('view-kiosk')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Admin/Fire Marshal Login -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-login" class="view">
+  <div class="header">
+    <div style="display:flex;align-items:center;">
+      <button class="back-btn" onclick="showView('view-home')">&larr;</button>
+      <h1>Admin / Fire Marshal Login</h1>
+    </div>
+  </div>
+  <div class="content center-content">
+    <div class="card" style="max-width:400px;width:100%;">
+      <h2 style="text-align:center;margin-bottom:20px;">Sign In</h2>
+      <div class="form-group"><label>Username</label><input type="text" id="login-user" autocomplete="username"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" autocomplete="current-password"></div>
+      <button class="btn btn-primary btn-lg" style="width:100%;" onclick="doLogin()">Login</button>
+      <p id="login-error" style="color:var(--danger);text-align:center;margin-top:12px;display:none;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Admin Dashboard -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-admin" class="view">
+  <div class="header">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <div class="header-sub" id="admin-user-label"></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-sm btn-white" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="admin-people" onclick="switchAdminTab(this)">People</div>
+    <div class="tab" data-tab="admin-visits" onclick="switchAdminTab(this)">Visits</div>
+    <div class="tab" data-tab="admin-logs" onclick="switchAdminTab(this)">Audit Log</div>
+    <div class="tab" data-tab="admin-users" onclick="switchAdminTab(this)">Users</div>
+  </div>
+  <div class="content">
+    <div id="admin-people" class="admin-tab-content">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <input type="text" id="admin-people-search" placeholder="Search people..." style="flex:1;min-width:200px;padding:10px;border:2px solid var(--border);border-radius:8px;">
+        <select id="admin-people-type" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+          <option value="">All Types</option>
+          <option value="employee">Employees</option>
+          <option value="visitor">Visitors</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadAdminPeople()">Search</button>
+      </div>
+      <div id="admin-people-list"></div>
+    </div>
+    <div id="admin-visits" class="admin-tab-content" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <select id="admin-visits-location" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+          <option value="">All Locations</option>
+        </select>
+        <input type="date" id="admin-visits-from" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+        <input type="date" id="admin-visits-to" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+        <button class="btn btn-primary btn-sm" onclick="loadAdminVisits()">Filter</button>
+      </div>
+      <div class="table-container"><table id="admin-visits-table">
+        <thead><tr><th>Name</th><th>Type</th><th>Location</th><th>Check In</th><th>Check Out</th><th>Host</th><th>Purpose</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+    <div id="admin-logs" class="admin-tab-content" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <select id="admin-logs-action" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+          <option value="">All Actions</option>
+          <option value="check_in">Check In</option>
+          <option value="check_out">Check Out</option>
+          <option value="person_registered">Registration</option>
+          <option value="person_deleted">Deletion</option>
+          <option value="admin_login">Admin Login</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadAdminLogs()">Filter</button>
+      </div>
+      <div class="table-container"><table id="admin-logs-table">
+        <thead><tr><th>Time</th><th>Action</th><th>Person</th><th>Location</th><th>Details</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+    <div id="admin-users" class="admin-tab-content" style="display:none;">
+      <button class="btn btn-primary btn-sm" onclick="showAddUserModal()" style="margin-bottom:16px;">+ Add User</button>
+      <div id="admin-users-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Fire Marshal Dashboard -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-fire" class="view">
+  <div class="header" style="background:#c62828;">
+    <div>
+      <h1>&#128293; Fire Marshal Dashboard</h1>
+      <div class="header-sub" id="fire-user-label"></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-sm btn-white" onclick="loadFireData()">&#8635; Refresh</button>
+      <button class="btn btn-sm btn-white" onclick="printFireList()">&#128424; Print</button>
+      <button class="btn btn-sm btn-white" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+  <div class="fire-header-print">
+    <h1>Komfort Partitioning - Fire Evacuation Roll Call</h1>
+    <p id="fire-print-time"></p>
+  </div>
+  <div id="fire-summary" style="display:flex;gap:12px;padding:16px;flex-wrap:wrap;"></div>
+  <div class="filter-bar" id="fire-filter-bar"></div>
+  <div class="content">
+    <div id="fire-people-list" class="card"></div>
+    <div id="fire-timestamp" style="text-align:center;color:var(--text-light);padding:8px;font-size:0.85rem;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- Camera Modal -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="camera-modal">
+  <div class="modal">
+    <h2>Take Photo</h2>
+    <div class="camera-container">
+      <video id="camera-video" autoplay playsinline></video>
+      <canvas id="camera-canvas"></canvas>
+    </div>
+    <div class="camera-actions">
+      <button class="btn btn-primary" id="camera-capture-btn" onclick="capturePhoto()">&#128247; Capture</button>
+      <button class="btn btn-success" id="camera-accept-btn" style="display:none;" onclick="acceptPhoto()">&#10004; Accept</button>
+      <button class="btn btn-outline" id="camera-retake-btn" style="display:none;" onclick="retakePhoto()">Retake</button>
+      <button class="btn btn-outline" onclick="closeCamera()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- Add User Modal -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="add-user-modal">
+  <div class="modal">
+    <h2>Add Admin / Fire Marshal</h2>
+    <div class="form-group"><label>Full Name</label><input type="text" id="new-user-name"></div>
+    <div class="form-group"><label>Username</label><input type="text" id="new-user-username"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="new-user-password"></div>
+    <div class="form-group">
+      <label>Role</label>
+      <select id="new-user-role">
+        <option value="admin">Admin</option>
+        <option value="fire_marshal">Fire Marshal</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('add-user-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATABASE LAYER — IndexedDB for full offline/local persistence
+// ═══════════════════════════════════════════════════════════════
+const DB_NAME = 'KomfortVM';
+const DB_VERSION = 1;
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('people')) {
+        const ps = d.createObjectStore('people', { keyPath: 'id' });
+        ps.createIndex('type', 'type');
+        ps.createIndex('name', ['first_name', 'last_name']);
+      }
+      if (!d.objectStoreNames.contains('visits')) {
+        const vs = d.createObjectStore('visits', { keyPath: 'id' });
+        vs.createIndex('person_id', 'person_id');
+        vs.createIndex('location_id', 'location_id');
+        vs.createIndex('active', ['location_id', 'check_out']);
+      }
+      if (!d.objectStoreNames.contains('users')) {
+        const us = d.createObjectStore('users', { keyPath: 'id' });
+        us.createIndex('username', 'username', { unique: true });
+      }
+      if (!d.objectStoreNames.contains('audit_log')) {
+        const al = d.createObjectStore('audit_log', { keyPath: 'id', autoIncrement: true });
+        al.createIndex('timestamp', 'timestamp');
+        al.createIndex('action', 'action');
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function tx(store, mode = 'readonly') {
+  return db.transaction(store, mode).objectStore(store);
+}
+
+function txPromise(store, mode, fn) {
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(store, mode);
+    const s = t.objectStore(store);
+    const result = fn(s);
+    t.oncomplete = () => resolve(result._result !== undefined ? result._result : undefined);
+    t.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbGetAll(storeName) {
+  return new Promise((resolve, reject) => {
+    const req = tx(storeName).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbGet(storeName, key) {
+  return new Promise((resolve, reject) => {
+    const req = tx(storeName).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbPut(storeName, data) {
+  return new Promise((resolve, reject) => {
+    const req = tx(storeName, 'readwrite').put(data);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbDelete(storeName, key) {
+  return new Promise((resolve, reject) => {
+    const req = tx(storeName, 'readwrite').delete(key);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function idbAdd(storeName, data) {
+  return new Promise((resolve, reject) => {
+    const req = tx(storeName, 'readwrite').add(data);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function uuid() {
+  return crypto.randomUUID ? crypto.randomUUID() : 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random()*16).toString(16));
+}
+
+function nowISO() { return new Date().toISOString(); }
+
+function logAction(action, details = {}) {
+  idbAdd('audit_log', { timestamp: nowISO(), action, ...details });
+}
+
+// ── Seed defaults ──
+async function seedDefaults() {
+  const users = await idbGetAll('users');
+  if (users.length === 0) {
+    await idbPut('users', { id: uuid(), username: 'admin', password: 'admin123', role: 'admin', full_name: 'System Administrator', created_at: nowISO() });
+    await idbPut('users', { id: uuid(), username: 'marshal', password: 'marshal123', role: 'fire_marshal', full_name: 'Fire Marshal', created_at: nowISO() });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// LOCATIONS (static)
+// ═══════════════════════════════════════════════
+const LOCATIONS = [
+  { id: 'leeds', name: 'Leeds' },
+  { id: 'axcess-10', name: 'Axcess-10' },
+  { id: 'crawley', name: 'Crawley' }
+];
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let currentLocation = null;
+let currentPerson = null;
+let authUser = null;
+let capturedPhoto = null;
+let cameraStream = null;
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function showView(viewId) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+  if (viewId === 'view-home') loadSites();
+  if (viewId === 'view-kiosk') loadKioskData();
+  if (viewId === 'view-checkin') resetCheckinFlow();
+  if (viewId === 'view-checkout') loadCheckoutList();
+  if (viewId === 'view-admin') { loadAdminPeople(); loadAdminLocationFilter(); }
+  if (viewId === 'view-fire') loadFireData();
+}
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function avatarHtml(person, size = '') {
+  const cls = size === 'lg' ? 'avatar avatar-lg' : 'avatar';
+  if (person.photo) {
+    return `<div class="${cls}"><img src="${person.photo}" alt=""></div>`;
+  }
+  const initials = (person.first_name?.[0] || '') + (person.last_name?.[0] || '');
+  return `<div class="${cls}">${initials.toUpperCase()}</div>`;
+}
+
+function formatTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ═══════════════════════════════════════════════
+// SITE SELECTION
+// ═══════════════════════════════════════════════
+async function loadSites() {
+  const visits = await idbGetAll('visits');
+  const grid = document.getElementById('site-grid');
+  grid.innerHTML = LOCATIONS.map(loc => {
+    const count = visits.filter(v => v.location_id === loc.id && !v.check_out).length;
+    return `
+      <div class="site-card" onclick="selectSite('${loc.id}', '${loc.name}')">
+        <h2>${loc.name}</h2>
+        <div class="count">${count}</div>
+        <div class="count-label">people on site</div>
+      </div>`;
+  }).join('');
+}
+
+function selectSite(id, name) {
+  currentLocation = { id, name };
+  document.getElementById('kiosk-site-name').textContent = name;
+  showView('view-kiosk');
+}
+
+// ═══════════════════════════════════════════════
+// KIOSK
+// ═══════════════════════════════════════════════
+async function loadKioskData() {
+  if (!currentLocation) return;
+  const visits = await idbGetAll('visits');
+  const people = await idbGetAll('people');
+  const active = visits.filter(v => v.location_id === currentLocation.id && !v.check_out);
+  document.getElementById('kiosk-count-num').textContent = active.length;
+  const list = document.getElementById('kiosk-people-list');
+  if (active.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-light);padding:12px;">No one currently on site.</p>';
+  } else {
+    list.innerHTML = active.map(v => {
+      const p = people.find(pp => pp.id === v.person_id) || {};
+      return `<div class="people-row">
+        ${avatarHtml(p)}
+        <div class="info">
+          <div class="name">${escHtml(p.first_name||'')} ${escHtml(p.last_name||'')}</div>
+          <div class="meta">${escHtml(p.company||'')} &middot; ${formatTime(v.check_in)}</div>
+        </div>
+        <span class="badge badge-${p.type}">${p.type}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+function startCheckin() {
+  document.getElementById('checkin-site-label').textContent = currentLocation.name;
+  showView('view-checkin');
+}
+
+function startCheckout() {
+  document.getElementById('checkout-site-label').textContent = currentLocation.name;
+  showView('view-checkout');
+}
+
+// ═══════════════════════════════════════════════
+// CHECK-IN FLOW
+// ═══════════════════════════════════════════════
+function resetCheckinFlow() {
+  currentPerson = null;
+  capturedPhoto = null;
+  document.getElementById('checkin-search').value = '';
+  document.getElementById('checkin-results').style.display = 'none';
+  document.getElementById('checkin-step1').style.display = 'block';
+  document.getElementById('checkin-register').style.display = 'none';
+  document.getElementById('checkin-step2').style.display = 'none';
+  document.getElementById('checkin-step3').style.display = 'none';
+  document.getElementById('checkin-host').value = '';
+  document.getElementById('checkin-purpose').value = '';
+  const si = document.getElementById('checkin-search');
+  si.oninput = debounce(searchPeople, 300);
+  setTimeout(() => si.focus(), 100);
+}
+
+let _debounceTimer;
+function debounce(fn, ms) {
+  return function(...args) {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => fn(...args), ms);
+  };
+}
+
+async function searchPeople() {
+  const q = document.getElementById('checkin-search').value.trim().toLowerCase();
+  const results = document.getElementById('checkin-results');
+  if (q.length < 2) { results.style.display = 'none'; return; }
+  const people = await idbGetAll('people');
+  const matches = people.filter(p =>
+    `${p.first_name} ${p.last_name}`.toLowerCase().includes(q) ||
+    (p.company || '').toLowerCase().includes(q)
+  ).slice(0, 20);
+  if (matches.length === 0) {
+    results.innerHTML = '<div style="padding:12px;color:var(--text-light);">No matches found. Register as new below.</div>';
+  } else {
+    results.innerHTML = matches.map(p => `
+      <div class="search-result" data-person-id="${p.id}">
+        ${avatarHtml(p)}
+        <div>
+          <div style="font-weight:500;">${escHtml(p.first_name)} ${escHtml(p.last_name)}</div>
+          <div style="font-size:0.85rem;color:var(--text-light);">${p.type}${p.company ? ' — ' + escHtml(p.company) : ''}</div>
+        </div>
+      </div>
+    `).join('');
+    results.querySelectorAll('.search-result').forEach(el => {
+      el.addEventListener('click', async () => {
+        const person = await idbGet('people', el.dataset.personId);
+        if (person) selectPerson(person);
+      });
+    });
+  }
+  results.style.display = 'block';
+}
+
+function selectPerson(person) {
+  currentPerson = person;
+  showCheckinStep2();
+}
+
+function showCheckinStep2() {
+  document.getElementById('checkin-step1').style.display = 'none';
+  document.getElementById('checkin-register').style.display = 'none';
+  document.getElementById('checkin-step2').style.display = 'block';
+  document.getElementById('checkin-person-name').textContent = `${currentPerson.first_name} ${currentPerson.last_name}`;
+  document.getElementById('checkin-person-type').textContent = currentPerson.type;
+  document.getElementById('checkin-person-type').className = `badge badge-${currentPerson.type}`;
+  const av = document.getElementById('checkin-avatar');
+  if (currentPerson.photo) {
+    av.innerHTML = `<img src="${currentPerson.photo}" alt="">`;
+  } else {
+    av.textContent = (currentPerson.first_name[0] + currentPerson.last_name[0]).toUpperCase();
+  }
+}
+
+function showRegisterForm() {
+  document.getElementById('checkin-step1').style.display = 'none';
+  document.getElementById('checkin-register').style.display = 'block';
+  ['reg-first','reg-last','reg-company','reg-email','reg-phone'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('reg-first').focus();
+}
+
+function cancelRegister() {
+  document.getElementById('checkin-register').style.display = 'none';
+  document.getElementById('checkin-step1').style.display = 'block';
+}
+
+async function registerPerson() {
+  const firstName = document.getElementById('reg-first').value.trim();
+  const lastName = document.getElementById('reg-last').value.trim();
+  if (!firstName || !lastName) { toast('First and last name required', 'error'); return; }
+  const person = {
+    id: uuid(),
+    type: document.getElementById('reg-type').value,
+    first_name: firstName,
+    last_name: lastName,
+    company: document.getElementById('reg-company').value.trim(),
+    email: document.getElementById('reg-email').value.trim(),
+    phone: document.getElementById('reg-phone').value.trim(),
+    photo: null,
+    created_at: nowISO()
+  };
+  await idbPut('people', person);
+  logAction('person_registered', { person_id: person.id, details: `${person.type}: ${person.first_name} ${person.last_name}` });
+  currentPerson = person;
+  toast('Registered successfully!');
+  showCheckinStep2();
+}
+
+async function completeCheckin() {
+  // Save photo if captured
+  if (capturedPhoto) {
+    currentPerson.photo = capturedPhoto;
+    await idbPut('people', currentPerson);
+  }
+  // Check for existing active visit
+  const visits = await idbGetAll('visits');
+  const existing = visits.find(v => v.person_id === currentPerson.id && v.location_id === currentLocation.id && !v.check_out);
+  if (existing) { toast('Already signed in at this location', 'error'); return; }
+
+  const visit = {
+    id: uuid(),
+    person_id: currentPerson.id,
+    location_id: currentLocation.id,
+    check_in: nowISO(),
+    check_out: null,
+    host: document.getElementById('checkin-host').value.trim(),
+    purpose: document.getElementById('checkin-purpose').value.trim()
+  };
+  await idbPut('visits', visit);
+  logAction('check_in', { person_id: currentPerson.id, location_id: currentLocation.id, visit_id: visit.id, details: `${currentPerson.first_name} ${currentPerson.last_name} signed in at ${currentLocation.name}` });
+
+  document.getElementById('checkin-step2').style.display = 'none';
+  document.getElementById('checkin-step3').style.display = 'block';
+  document.getElementById('checkin-confirm-msg').textContent =
+    `${currentPerson.first_name} ${currentPerson.last_name} is now signed in at ${currentLocation.name}.`;
+}
+
+// ═══════════════════════════════════════════════
+// CHECK-OUT FLOW
+// ═══════════════════════════════════════════════
+async function loadCheckoutList() {
+  if (!currentLocation) return;
+  const visits = await idbGetAll('visits');
+  const people = await idbGetAll('people');
+  const active = visits.filter(v => v.location_id === currentLocation.id && !v.check_out);
+  const list = document.getElementById('checkout-list');
+  const empty = document.getElementById('checkout-empty');
+  const confirm = document.getElementById('checkout-confirm');
+  const card = document.getElementById('checkout-card');
+  confirm.style.display = 'none';
+  card.style.display = 'block';
+
+  if (active.length === 0) {
+    list.style.display = 'none';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    list.style.display = 'block';
+    list.innerHTML = active.map(v => {
+      const p = people.find(pp => pp.id === v.person_id) || {};
+      return `<div class="people-row" style="cursor:pointer;" data-visit-id="${v.id}" data-person-name="${escHtml(p.first_name||'')} ${escHtml(p.last_name||'')}">
+        ${avatarHtml(p)}
+        <div class="info">
+          <div class="name">${escHtml(p.first_name||'')} ${escHtml(p.last_name||'')}</div>
+          <div class="meta">${escHtml(p.company||'')} &middot; Signed in ${formatTime(v.check_in)}</div>
+        </div>
+        <span class="badge badge-${p.type}">${p.type}</span>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.people-row').forEach(el => {
+      el.addEventListener('click', () => doCheckout(el.dataset.visitId, el.dataset.personName));
+    });
+  }
+}
+
+async function doCheckout(visitId, name) {
+  const visit = await idbGet('visits', visitId);
+  if (!visit) return;
+  visit.check_out = nowISO();
+  await idbPut('visits', visit);
+  logAction('check_out', { person_id: visit.person_id, location_id: visit.location_id, visit_id: visit.id, details: `${name} signed out from ${currentLocation.name}` });
+
+  document.getElementById('checkout-card').style.display = 'none';
+  document.getElementById('checkout-confirm').style.display = 'block';
+  document.getElementById('checkout-confirm-msg').textContent = `${name} has signed out from ${currentLocation.name}.`;
+}
+
+// ═══════════════════════════════════════════════
+// CAMERA
+// ═══════════════════════════════════════════════
+async function openCamera() {
+  const modal = document.getElementById('camera-modal');
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  modal.classList.add('active');
+  video.style.display = 'block';
+  canvas.style.display = 'none';
+  document.getElementById('camera-capture-btn').style.display = '';
+  document.getElementById('camera-accept-btn').style.display = 'none';
+  document.getElementById('camera-retake-btn').style.display = 'none';
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+    video.srcObject = cameraStream;
+  } catch(e) {
+    toast('Camera access denied. Please allow camera permissions.', 'error');
+    closeCamera();
+  }
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  video.style.display = 'none';
+  canvas.style.display = 'block';
+  document.getElementById('camera-capture-btn').style.display = 'none';
+  document.getElementById('camera-accept-btn').style.display = '';
+  document.getElementById('camera-retake-btn').style.display = '';
+}
+
+function retakePhoto() {
+  document.getElementById('camera-video').style.display = 'block';
+  document.getElementById('camera-canvas').style.display = 'none';
+  document.getElementById('camera-capture-btn').style.display = '';
+  document.getElementById('camera-accept-btn').style.display = 'none';
+  document.getElementById('camera-retake-btn').style.display = 'none';
+}
+
+function acceptPhoto() {
+  capturedPhoto = document.getElementById('camera-canvas').toDataURL('image/jpeg', 0.7);
+  document.getElementById('checkin-avatar').innerHTML = `<img src="${capturedPhoto}" alt="">`;
+  closeCamera();
+  toast('Photo captured!');
+}
+
+function closeCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  document.getElementById('camera-modal').classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════
+// AUTH (local)
+// ═══════════════════════════════════════════════
+async function doLogin() {
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.display = 'none';
+  if (!username || !password) { errorEl.textContent = 'Please enter credentials'; errorEl.style.display = 'block'; return; }
+
+  const users = await idbGetAll('users');
+  const user = users.find(u => u.username === username && u.password === password);
+  if (!user) { errorEl.textContent = 'Invalid username or password'; errorEl.style.display = 'block'; return; }
+
+  authUser = user;
+  logAction('admin_login', { user_id: user.id, details: `${user.full_name} logged in` });
+
+  if (user.role === 'admin') {
+    document.getElementById('admin-user-label').textContent = `Logged in as ${user.full_name}`;
+    showView('view-admin');
+  } else {
+    document.getElementById('fire-user-label').textContent = user.full_name;
+    showView('view-fire');
+  }
+}
+
+function doLogout() {
+  authUser = null;
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  showView('view-home');
+}
+
+// ═══════════════════════════════════════════════
+// ADMIN DASHBOARD
+// ═══════════════════════════════════════════════
+function switchAdminTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
+  el.classList.add('active');
+  const tabId = el.dataset.tab;
+  document.getElementById(tabId).style.display = 'block';
+  if (tabId === 'admin-people') loadAdminPeople();
+  if (tabId === 'admin-visits') loadAdminVisits();
+  if (tabId === 'admin-logs') loadAdminLogs();
+  if (tabId === 'admin-users') loadAdminUsers();
+}
+
+async function loadAdminPeople() {
+  const q = (document.getElementById('admin-people-search')?.value || '').toLowerCase();
+  const type = document.getElementById('admin-people-type')?.value || '';
+  let people = await idbGetAll('people');
+  if (q) people = people.filter(p => `${p.first_name} ${p.last_name}`.toLowerCase().includes(q));
+  if (type) people = people.filter(p => p.type === type);
+  people.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name));
+
+  const list = document.getElementById('admin-people-list');
+  if (people.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-light);padding:20px;">No people found.</p>';
+  } else {
+    list.innerHTML = people.map(p => `
+      <div class="card" style="display:flex;align-items:center;gap:12px;">
+        ${avatarHtml(p)}
+        <div style="flex:1;">
+          <div style="font-weight:600;">${escHtml(p.first_name)} ${escHtml(p.last_name)}</div>
+          <div style="font-size:0.85rem;color:var(--text-light);">
+            ${p.type}${p.company ? ' — ' + escHtml(p.company) : ''}${p.email ? ' — ' + escHtml(p.email) : ''}
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deletePerson('${p.id}')">Remove</button>
+      </div>
+    `).join('');
+  }
+}
+
+async function deletePerson(id) {
+  const person = await idbGet('people', id);
+  if (!person) return;
+  if (!confirm(`Remove ${person.first_name} ${person.last_name} from the database? This cannot be undone.`)) return;
+  // Check out any active visits
+  const visits = await idbGetAll('visits');
+  for (const v of visits) {
+    if (v.person_id === id && !v.check_out) {
+      v.check_out = nowISO();
+      await idbPut('visits', v);
+    }
+  }
+  await idbDelete('people', id);
+  logAction('person_deleted', { person_id: id, user_id: authUser?.id, details: `Deleted ${person.type}: ${person.first_name} ${person.last_name}` });
+  toast(`${person.first_name} ${person.last_name} removed`);
+  loadAdminPeople();
+}
+
+function loadAdminLocationFilter() {
+  const sel = document.getElementById('admin-visits-location');
+  sel.innerHTML = '<option value="">All Locations</option>' + LOCATIONS.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+}
+
+async function loadAdminVisits() {
+  const locationId = document.getElementById('admin-visits-location').value;
+  const fromDate = document.getElementById('admin-visits-from').value;
+  const toDate = document.getElementById('admin-visits-to').value;
+  let visits = await idbGetAll('visits');
+  const people = await idbGetAll('people');
+  if (locationId) visits = visits.filter(v => v.location_id === locationId);
+  if (fromDate) visits = visits.filter(v => v.check_in >= fromDate);
+  if (toDate) visits = visits.filter(v => v.check_in <= toDate + 'T23:59:59');
+  visits.sort((a, b) => b.check_in.localeCompare(a.check_in));
+  visits = visits.slice(0, 200);
+
+  const locMap = {};
+  LOCATIONS.forEach(l => locMap[l.id] = l.name);
+
+  const tbody = document.querySelector('#admin-visits-table tbody');
+  tbody.innerHTML = visits.map(v => {
+    const p = people.find(pp => pp.id === v.person_id) || {};
+    return `<tr>
+      <td>${escHtml(p.first_name||'')} ${escHtml(p.last_name||'')}</td>
+      <td><span class="badge badge-${p.type||'visitor'}">${p.type||'?'}</span></td>
+      <td>${locMap[v.location_id] || v.location_id}</td>
+      <td>${formatTime(v.check_in)}</td>
+      <td>${v.check_out ? formatTime(v.check_out) : '<span class="status-dot green"></span> On site'}</td>
+      <td>${escHtml(v.host||'—')}</td>
+      <td>${escHtml(v.purpose||'—')}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadAdminLogs() {
+  const actionFilter = document.getElementById('admin-logs-action').value;
+  let logs = await idbGetAll('audit_log');
+  if (actionFilter) logs = logs.filter(l => l.action === actionFilter);
+  logs.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+  logs = logs.slice(0, 200);
+
+  const people = await idbGetAll('people');
+  const pMap = {};
+  people.forEach(p => pMap[p.id] = `${p.first_name} ${p.last_name}`);
+  const locMap = {};
+  LOCATIONS.forEach(l => locMap[l.id] = l.name);
+
+  const tbody = document.querySelector('#admin-logs-table tbody');
+  tbody.innerHTML = logs.map(l => `
+    <tr>
+      <td>${formatTime(l.timestamp)}</td>
+      <td>${(l.action||'').replace(/_/g, ' ')}</td>
+      <td>${l.person_id ? escHtml(pMap[l.person_id] || l.person_id) : '—'}</td>
+      <td>${l.location_id ? (locMap[l.location_id] || l.location_id) : '—'}</td>
+      <td>${escHtml(l.details||'—')}</td>
+    </tr>
+  `).join('');
+}
+
+async function loadAdminUsers() {
+  const users = await idbGetAll('users');
+  const list = document.getElementById('admin-users-list');
+  list.innerHTML = users.map(u => `
+    <div class="card" style="display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;">
+        <div style="font-weight:600;">${escHtml(u.full_name)}</div>
+        <div style="font-size:0.85rem;color:var(--text-light);">@${escHtml(u.username)} &middot; ${u.role.replace('_', ' ')}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Remove</button>
+    </div>
+  `).join('');
+}
+
+async function deleteUser(id) {
+  if (authUser && authUser.id === id) { toast('Cannot delete yourself', 'error'); return; }
+  const user = await idbGet('users', id);
+  if (!user) return;
+  if (!confirm(`Remove user ${user.full_name}?`)) return;
+  await idbDelete('users', id);
+  logAction('user_deleted', { user_id: authUser?.id, details: `Deleted ${user.role}: ${user.full_name}` });
+  toast(`${user.full_name} removed`);
+  loadAdminUsers();
+}
+
+function showAddUserModal() {
+  ['new-user-name','new-user-username','new-user-password'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('add-user-modal').classList.add('active');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function addUser() {
+  const fullName = document.getElementById('new-user-name').value.trim();
+  const username = document.getElementById('new-user-username').value.trim();
+  const password = document.getElementById('new-user-password').value;
+  const role = document.getElementById('new-user-role').value;
+  if (!fullName || !username || !password) { toast('All fields are required', 'error'); return; }
+
+  const users = await idbGetAll('users');
+  if (users.find(u => u.username === username)) { toast('Username already exists', 'error'); return; }
+
+  await idbPut('users', { id: uuid(), username, password, role, full_name: fullName, created_at: nowISO() });
+  logAction('user_created', { user_id: authUser?.id, details: `Created ${role}: ${fullName} (${username})` });
+  toast('User created');
+  closeModal('add-user-modal');
+  loadAdminUsers();
+}
+
+// ═══════════════════════════════════════════════
+// FIRE MARSHAL DASHBOARD
+// ═══════════════════════════════════════════════
+let fireFilter = 'all';
+
+async function loadFireData() {
+  const visits = await idbGetAll('visits');
+  const people = await idbGetAll('people');
+  const active = visits.filter(v => !v.check_out);
+
+  // Summary
+  const summaryEl = document.getElementById('fire-summary');
+  const totalAll = active.length;
+  const summaryData = LOCATIONS.map(loc => {
+    const locActive = active.filter(v => v.location_id === loc.id);
+    const pplIds = locActive.map(v => v.person_id);
+    const locPeople = pplIds.map(id => people.find(p => p.id === id)).filter(Boolean);
+    return {
+      ...loc,
+      total: locActive.length,
+      employees: locPeople.filter(p => p.type === 'employee').length,
+      visitors: locPeople.filter(p => p.type === 'visitor').length
+    };
+  });
+
+  summaryEl.innerHTML = `
+    <div class="card" style="flex:1;min-width:140px;text-align:center;background:#c62828;color:white;">
+      <div style="font-size:2rem;font-weight:700;">${totalAll}</div>
+      <div>All Sites</div>
+    </div>
+  ` + summaryData.map(l => `
+    <div class="card" style="flex:1;min-width:140px;text-align:center;">
+      <div style="font-size:2rem;font-weight:700;color:var(--primary);">${l.total}</div>
+      <div style="font-weight:500;">${l.name}</div>
+      <div style="font-size:0.8rem;color:var(--text-light);">${l.employees} emp / ${l.visitors} vis</div>
+    </div>
+  `).join('');
+
+  // Filter bar
+  const filterBar = document.getElementById('fire-filter-bar');
+  filterBar.innerHTML = `
+    <div class="filter-chip ${fireFilter === 'all' ? 'active' : ''}" onclick="setFireFilter('all')">All Sites (${totalAll})</div>
+  ` + summaryData.map(l => `
+    <div class="filter-chip ${fireFilter === l.id ? 'active' : ''}" onclick="setFireFilter('${l.id}')">${l.name} (${l.total})</div>
+  `).join('');
+
+  // People list
+  const filtered = fireFilter === 'all' ? active : active.filter(v => v.location_id === fireFilter);
+  const locMap = {};
+  LOCATIONS.forEach(l => locMap[l.id] = l.name);
+
+  const listEl = document.getElementById('fire-people-list');
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-light);">No one currently on site.</p>';
+  } else {
+    const rows = filtered.map(v => {
+      const p = people.find(pp => pp.id === v.person_id) || {};
+      return { ...p, check_in: v.check_in, location_name: locMap[v.location_id] || v.location_id };
+    });
+    rows.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || ''));
+
+    listEl.innerHTML = `
+      <table style="width:100%;">
+        <thead><tr><th>#</th><th>Name</th><th>Type</th><th>Company</th><th>Location</th><th>Signed In</th></tr></thead>
+        <tbody>
+          ${rows.map((p, i) => `
+            <tr>
+              <td>${i + 1}</td>
+              <td style="font-weight:500;">${escHtml(p.first_name||'')} ${escHtml(p.last_name||'')}</td>
+              <td><span class="badge badge-${p.type||'visitor'}">${p.type||'?'}</span></td>
+              <td>${escHtml(p.company||'—')}</td>
+              <td>${escHtml(p.location_name)}</td>
+              <td>${formatTime(p.check_in)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  const now = new Date().toLocaleString('en-GB');
+  document.getElementById('fire-timestamp').textContent = `Last refreshed: ${now}`;
+  document.getElementById('fire-print-time').textContent = `Generated: ${now}`;
+}
+
+function setFireFilter(filter) { fireFilter = filter; loadFireData(); }
+
+function printFireList() { window.print(); }
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+(async function init() {
+  await openDB();
+  await seedDefaults();
+  loadSites();
+})();
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
