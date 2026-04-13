@@ -288,8 +288,10 @@
       <div style="text-align:center;margin-bottom:16px;">
         <button class="btn btn-outline btn-sm" onclick="openCamera()">&#128247; Take / Update Photo</button>
       </div>
-      <div class="form-group"><label>Host (who are you visiting?)</label><input type="text" id="checkin-host"></div>
-      <div class="form-group"><label>Purpose of visit</label><input type="text" id="checkin-purpose"></div>
+      <div id="checkin-visitor-fields">
+        <div class="form-group"><label>Host (who are you visiting?)</label><input type="text" id="checkin-host"></div>
+        <div class="form-group"><label>Purpose of visit</label><input type="text" id="checkin-purpose"></div>
+      </div>
       <button class="btn btn-success btn-lg" style="width:100%;" onclick="completeCheckin()">Complete Sign In</button>
     </div>
 
@@ -915,6 +917,8 @@ function showCheckinStep2() {
   } else {
     av.textContent = (currentPerson.first_name[0] + currentPerson.last_name[0]).toUpperCase();
   }
+  // Hide host/purpose fields for employees, show for visitors
+  document.getElementById('checkin-visitor-fields').style.display = currentPerson.type === 'employee' ? 'none' : 'block';
 }
 
 function showRegisterForm() {
