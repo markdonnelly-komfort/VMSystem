@@ -582,10 +582,13 @@
 <!-- ═══════════════════════════════════════════ -->
 <div class="modal-overlay" id="add-user-modal">
   <div class="modal">
-    <h2>Add Admin / Fire Marshal</h2>
-    <div class="form-group"><label>Full Name</label><input type="text" id="new-user-name"></div>
-    <div class="form-group"><label>Username</label><input type="text" id="new-user-username"></div>
-    <div class="form-group"><label>Password</label><input type="password" id="new-user-password"></div>
+    <h2 id="user-modal-title">Add Admin / Fire Marshal</h2>
+    <input type="hidden" id="edit-user-id">
+    <div class="form-group"><label>Full Name *</label><input type="text" id="new-user-name"></div>
+    <div class="form-group"><label>Username *</label><input type="text" id="new-user-username"></div>
+    <div class="form-group"><label>Password *</label><input type="password" id="new-user-password" placeholder=""></div>
+    <div class="form-group"><label>Email</label><input type="email" id="new-user-email"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="new-user-phone"></div>
     <div class="form-group">
       <label>Role</label>
       <select id="new-user-role">
@@ -595,7 +598,31 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('add-user-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="addUser()">Create User</button>
+      <button class="btn btn-primary" id="user-modal-save-btn" onclick="saveUser()">Create User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Person Modal -->
+<div class="modal-overlay" id="edit-person-modal">
+  <div class="modal">
+    <h2>Edit Person</h2>
+    <input type="hidden" id="edit-person-id">
+    <div class="form-group">
+      <label>Type</label>
+      <select id="edit-person-type">
+        <option value="visitor">Visitor</option>
+        <option value="employee">Employee</option>
+      </select>
+    </div>
+    <div class="form-group"><label>First Name *</label><input type="text" id="edit-person-first"></div>
+    <div class="form-group"><label>Last Name *</label><input type="text" id="edit-person-last"></div>
+    <div class="form-group"><label>Company</label><input type="text" id="edit-person-company"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="edit-person-email"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="edit-person-phone"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('edit-person-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePerson()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -709,8 +736,8 @@ function logAction(action, details = {}) {
 async function seedDefaults() {
   const users = await idbGetAll('users');
   if (users.length === 0) {
-    await idbPut('users', { id: uuid(), username: 'admin', password: 'admin123', role: 'admin', full_name: 'System Administrator', created_at: nowISO() });
-    await idbPut('users', { id: uuid(), username: 'marshal', password: 'marshal123', role: 'fire_marshal', full_name: 'Fire Marshal', created_at: nowISO() });
+    await idbPut('users', { id: uuid(), username: 'admin', password: 'admin123', role: 'admin', full_name: 'System Administrator', email: null, phone: null, created_at: nowISO() });
+    await idbPut('users', { id: uuid(), username: 'marshal', password: 'marshal123', role: 'fire_marshal', full_name: 'Fire Marshal', email: null, phone: null, created_at: nowISO() });
   }
 }
 
@@ -1190,9 +1217,10 @@ async function loadAdminPeople() {
         <div style="flex:1;">
           <div style="font-weight:600;">${escHtml(p.first_name)} ${escHtml(p.last_name)}</div>
           <div style="font-size:0.85rem;color:var(--text-light);">
-            ${p.type}${p.company ? ' — ' + escHtml(p.company) : ''}${p.email ? ' — ' + escHtml(p.email) : ''}
+            ${p.type}${p.company ? ' — ' + escHtml(p.company) : ''}${p.email ? ' — ' + escHtml(p.email) : ''}${p.phone ? ' — ' + escHtml(p.phone) : ''}
           </div>
         </div>
+        <button class="btn btn-outline btn-sm" onclick="editPerson('${p.id}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deletePerson('${p.id}')">Remove</button>
       </div>
     `).join('');
@@ -1285,7 +1313,9 @@ async function loadAdminUsers() {
       <div style="flex:1;">
         <div style="font-weight:600;">${escHtml(u.full_name)}</div>
         <div style="font-size:0.85rem;color:var(--text-light);">@${escHtml(u.username)} &middot; ${u.role.replace('_', ' ')}</div>
+        ${u.email || u.phone ? `<div style="font-size:0.85rem;color:var(--text-light);">${u.email ? escHtml(u.email) : ''}${u.email && u.phone ? ' &middot; ' : ''}${u.phone ? escHtml(u.phone) : ''}</div>` : ''}
       </div>
+      <button class="btn btn-outline btn-sm" onclick="editUser('${u.id}')">Edit</button>
       <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">Remove</button>
     </div>
   `).join('');
@@ -1303,27 +1333,105 @@ async function deleteUser(id) {
 }
 
 function showAddUserModal() {
-  ['new-user-name','new-user-username','new-user-password'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('user-modal-title').textContent = 'Add Admin / Fire Marshal';
+  document.getElementById('user-modal-save-btn').textContent = 'Create User';
+  document.getElementById('edit-user-id').value = '';
+  ['new-user-name','new-user-username','new-user-password','new-user-email','new-user-phone'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('new-user-password').placeholder = '';
+  document.getElementById('new-user-username').disabled = false;
+  document.getElementById('add-user-modal').classList.add('active');
+}
+
+async function editUser(id) {
+  const user = await idbGet('users', id);
+  if (!user) return;
+  document.getElementById('user-modal-title').textContent = 'Edit User';
+  document.getElementById('user-modal-save-btn').textContent = 'Save Changes';
+  document.getElementById('edit-user-id').value = user.id;
+  document.getElementById('new-user-name').value = user.full_name;
+  document.getElementById('new-user-username').value = user.username;
+  document.getElementById('new-user-username').disabled = true;
+  document.getElementById('new-user-password').value = '';
+  document.getElementById('new-user-password').placeholder = 'Leave blank to keep current';
+  document.getElementById('new-user-email').value = user.email || '';
+  document.getElementById('new-user-phone').value = user.phone || '';
+  document.getElementById('new-user-role').value = user.role;
   document.getElementById('add-user-modal').classList.add('active');
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-async function addUser() {
+async function saveUser() {
+  const editId = document.getElementById('edit-user-id').value;
   const fullName = document.getElementById('new-user-name').value.trim();
   const username = document.getElementById('new-user-username').value.trim();
   const password = document.getElementById('new-user-password').value;
+  const email = document.getElementById('new-user-email').value.trim();
+  const phone = document.getElementById('new-user-phone').value.trim();
   const role = document.getElementById('new-user-role').value;
-  if (!fullName || !username || !password) { toast('All fields are required', 'error'); return; }
 
-  const users = await idbGetAll('users');
-  if (users.find(u => u.username === username)) { toast('Username already exists', 'error'); return; }
+  if (!fullName || !username) { toast('Name and username are required', 'error'); return; }
 
-  await idbPut('users', { id: uuid(), username, password, role, full_name: fullName, created_at: nowISO() });
-  logAction('user_created', { user_id: authUser?.id, details: `Created ${role}: ${fullName} (${username})` });
-  toast('User created');
+  if (editId) {
+    // Editing existing user
+    const user = await idbGet('users', editId);
+    if (!user) { toast('User not found', 'error'); return; }
+    user.full_name = fullName;
+    user.email = email || null;
+    user.phone = phone || null;
+    user.role = role;
+    if (password) user.password = password;
+    await idbPut('users', user);
+    logAction('user_updated', { user_id: authUser?.id, details: `Updated ${role}: ${fullName} (${username})` });
+    toast('User updated');
+  } else {
+    // Creating new user
+    if (!password) { toast('Password is required for new users', 'error'); return; }
+    const users = await idbGetAll('users');
+    if (users.find(u => u.username === username)) { toast('Username already exists', 'error'); return; }
+    await idbPut('users', { id: uuid(), username, password, role, full_name: fullName, email: email || null, phone: phone || null, created_at: nowISO() });
+    logAction('user_created', { user_id: authUser?.id, details: `Created ${role}: ${fullName} (${username})` });
+    toast('User created');
+  }
   closeModal('add-user-modal');
   loadAdminUsers();
+}
+
+async function editPerson(id) {
+  const person = await idbGet('people', id);
+  if (!person) return;
+  document.getElementById('edit-person-id').value = person.id;
+  document.getElementById('edit-person-type').value = person.type;
+  document.getElementById('edit-person-first').value = person.first_name;
+  document.getElementById('edit-person-last').value = person.last_name;
+  document.getElementById('edit-person-company').value = person.company || '';
+  document.getElementById('edit-person-email').value = person.email || '';
+  document.getElementById('edit-person-phone').value = person.phone || '';
+  document.getElementById('edit-person-modal').classList.add('active');
+}
+
+async function savePerson() {
+  const id = document.getElementById('edit-person-id').value;
+  const person = await idbGet('people', id);
+  if (!person) { toast('Person not found', 'error'); return; }
+
+  const firstName = document.getElementById('edit-person-first').value.trim();
+  const lastName = document.getElementById('edit-person-last').value.trim();
+  if (!firstName || !lastName) { toast('First and last name are required', 'error'); return; }
+
+  person.type = document.getElementById('edit-person-type').value;
+  person.first_name = firstName;
+  person.last_name = lastName;
+  person.company = document.getElementById('edit-person-company').value.trim() || null;
+  person.email = document.getElementById('edit-person-email').value.trim() || null;
+  person.phone = document.getElementById('edit-person-phone').value.trim() || null;
+  person.updated_at = nowISO();
+
+  await idbPut('people', person);
+  logAction('person_updated', { person_id: id, user_id: authUser?.id, details: `Updated ${person.type}: ${firstName} ${lastName}` });
+  toast(`${firstName} ${lastName} updated`);
+  closeModal('edit-person-modal');
+  loadAdminPeople();
 }
 
 // ═══════════════════════════════════════════════
