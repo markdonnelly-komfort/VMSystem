@@ -532,6 +532,18 @@
 </div>
 
 <!-- ═══════════════════════════════════════════ -->
+<!-- Roll Call Detail Modal (from audit log) -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="rollcall-detail-modal">
+  <div class="modal" style="max-width:600px;">
+    <div id="rollcall-detail-content"></div>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn btn-primary" onclick="closeModal('rollcall-detail-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
 <!-- Roll Call Complete Modal -->
 <!-- ═══════════════════════════════════════════ -->
 <div class="modal-overlay" id="rollcall-complete-modal">
@@ -1382,11 +1394,9 @@ async function loadFireLogs() {
               <div><strong>Unaccounted:</strong> <span style="color:${data.unaccounted > 0 ? 'var(--danger)' : 'var(--text-light)'};font-weight:600;">${data.unaccounted}</span></div>
               <div><strong>Marshal:</strong> ${escHtml(data.marshal)}</div>
             </div>
-            ${data.unaccounted_names && data.unaccounted_names.length > 0 ? `
-              <div style="margin-top:8px;padding:8px;background:#ffebee;border-radius:6px;font-size:0.85rem;">
-                <strong style="color:var(--danger);">Unaccounted:</strong> ${data.unaccounted_names.map(n => escHtml(n)).join(', ')}
-              </div>
-            ` : ''}
+            <div style="margin-top:10px;">
+              <button class="btn btn-outline btn-sm" onclick='showRollcallDetail(${JSON.stringify(JSON.stringify(data))})'>View Full Details</button>
+            </div>
           </div>
         `;
       }).join('');
@@ -1410,6 +1420,49 @@ async function loadFireLogs() {
       </tr>
     `).join('');
   }
+}
+
+function showRollcallDetail(jsonStr) {
+  const data = JSON.parse(jsonStr);
+  const allAccounted = data.unaccounted === 0;
+  const el = document.getElementById('rollcall-detail-content');
+  el.innerHTML = `
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:3rem;">${allAccounted ? '&#10004;' : '&#9888;'}</div>
+      <h2 style="color:${allAccounted ? 'var(--success)' : 'var(--danger)'};">
+        Roll Call — ${escHtml(data.location)}
+      </h2>
+    </div>
+    <table style="width:100%;margin-bottom:16px;">
+      <tr><td style="font-weight:500;padding:6px 12px;">Date</td><td style="padding:6px 12px;">${new Date(data.start).toLocaleDateString('en-GB')}</td></tr>
+      <tr><td style="font-weight:500;padding:6px 12px;">Started</td><td style="padding:6px 12px;">${new Date(data.start).toLocaleTimeString('en-GB')}</td></tr>
+      <tr><td style="font-weight:500;padding:6px 12px;">Ended</td><td style="padding:6px 12px;">${new Date(data.end).toLocaleTimeString('en-GB')}</td></tr>
+      <tr><td style="font-weight:500;padding:6px 12px;">Duration</td><td style="padding:6px 12px;">${escHtml(data.duration)}</td></tr>
+      <tr><td style="font-weight:500;padding:6px 12px;">Fire Marshal</td><td style="padding:6px 12px;">${escHtml(data.marshal)}</td></tr>
+      <tr><td style="font-weight:500;padding:6px 12px;">Total On Site</td><td style="padding:6px 12px;">${data.total}</td></tr>
+      <tr><td style="font-weight:500;padding:6px 12px;">Accounted For</td><td style="padding:6px 12px;color:var(--success);font-weight:600;">${data.accounted}</td></tr>
+      <tr><td style="font-weight:500;padding:6px 12px;">Unaccounted</td><td style="padding:6px 12px;color:${data.unaccounted > 0 ? 'var(--danger)' : 'var(--text-light)'};font-weight:600;">${data.unaccounted}</td></tr>
+    </table>
+
+    ${data.accounted_names && data.accounted_names.length > 0 ? `
+      <div class="card" style="background:#e8f5e9;border:1px solid var(--success);padding:14px;">
+        <strong style="color:var(--success);">&#10004; Accounted For (${data.accounted_names.length})</strong>
+        <ol style="margin-top:8px;padding-left:24px;">
+          ${data.accounted_names.map(n => `<li style="padding:3px 0;">${escHtml(n)}</li>`).join('')}
+        </ol>
+      </div>
+    ` : ''}
+
+    ${data.unaccounted_names && data.unaccounted_names.length > 0 ? `
+      <div class="card" style="background:#ffebee;border:1px solid var(--danger);padding:14px;">
+        <strong style="color:var(--danger);">&#9888; Unaccounted (${data.unaccounted_names.length})</strong>
+        <ol style="margin-top:8px;padding-left:24px;">
+          ${data.unaccounted_names.map(n => `<li style="padding:3px 0;font-weight:600;">${escHtml(n)}</li>`).join('')}
+        </ol>
+      </div>
+    ` : ''}
+  `;
+  document.getElementById('rollcall-detail-modal').classList.add('active');
 }
 
 async function loadFireData() {
