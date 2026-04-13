@@ -142,9 +142,30 @@
 <body>
 
 <!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Device Admin Login (first screen) -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-device-login" class="view active">
+  <div class="header">
+    <h1>Komfort Visitor Management</h1>
+  </div>
+  <div class="content center-content">
+    <div class="logo-text">KOMFORT</div>
+    <div class="subtitle">Visitor Management System</div>
+    <div class="card" style="max-width:400px;width:100%;">
+      <h2 style="text-align:center;margin-bottom:20px;">Device Setup</h2>
+      <p style="text-align:center;color:var(--text-light);margin-bottom:20px;">Admin login required to activate this device</p>
+      <div class="form-group"><label>Username</label><input type="text" id="device-login-user" autocomplete="username"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="device-login-pass" autocomplete="current-password"></div>
+      <button class="btn btn-primary btn-lg" style="width:100%;" onclick="doDeviceLogin()">Unlock Device</button>
+      <p id="device-login-error" style="color:var(--danger);text-align:center;margin-top:12px;display:none;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
 <!-- VIEW: Site Selection (Landing) -->
 <!-- ═══════════════════════════════════════════ -->
-<div id="view-home" class="view active">
+<div id="view-home" class="view">
   <div class="header">
     <div>
       <h1>Komfort Visitor Management</h1>
@@ -152,6 +173,7 @@
     </div>
     <div class="header-actions">
       <button class="btn btn-sm btn-white" onclick="showView('view-login')">Admin / Fire Marshal</button>
+      <button class="btn btn-sm btn-outline" style="border-color:white;color:white;" onclick="doDeviceLock()">Lock Device</button>
     </div>
   </div>
   <div class="content center-content">
@@ -584,11 +606,16 @@ let currentPerson = null;
 let authUser = null;
 let capturedPhoto = null;
 let cameraStream = null;
+let deviceUnlocked = false;
 
 // ═══════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function showView(viewId) {
+  // Guard: require device unlock for all views except device login
+  if (viewId !== 'view-device-login' && !deviceUnlocked) {
+    viewId = 'view-device-login';
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(viewId).classList.add('active');
   if (viewId === 'view-home') loadSites();
@@ -936,7 +963,34 @@ function closeCamera() {
 }
 
 // ═══════════════════════════════════════════════
-// AUTH (local)
+// DEVICE AUTH (gate before location selection)
+// ═══════════════════════════════════════════════
+async function doDeviceLogin() {
+  const username = document.getElementById('device-login-user').value.trim();
+  const password = document.getElementById('device-login-pass').value;
+  const errorEl = document.getElementById('device-login-error');
+  errorEl.style.display = 'none';
+  if (!username || !password) { errorEl.textContent = 'Please enter credentials'; errorEl.style.display = 'block'; return; }
+
+  const users = await idbGetAll('users');
+  const user = users.find(u => u.username === username && u.password === password && u.role === 'admin');
+  if (!user) { errorEl.textContent = 'Invalid credentials or not an admin account'; errorEl.style.display = 'block'; return; }
+
+  // Persist device unlock in localStorage
+  localStorage.setItem('vm_device_unlocked', 'true');
+  localStorage.setItem('vm_device_unlocked_by', user.full_name);
+  deviceUnlocked = true;
+  logAction('device_unlocked', { user_id: user.id, details: `Device unlocked by ${user.full_name}` });
+  toast('Device activated');
+  showView('view-home');
+}
+
+function checkDeviceUnlocked() {
+  return localStorage.getItem('vm_device_unlocked') === 'true';
+}
+
+// ═══════════════════════════════════════════════
+// AUTH (admin dashboard / fire marshal login)
 // ═══════════════════════════════════════════════
 async function doLogin() {
   const username = document.getElementById('login-user').value.trim();
@@ -966,6 +1020,14 @@ function doLogout() {
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
   showView('view-home');
+}
+
+function doDeviceLock() {
+  localStorage.removeItem('vm_device_unlocked');
+  localStorage.removeItem('vm_device_unlocked_by');
+  deviceUnlocked = false;
+  authUser = null;
+  showView('view-device-login');
 }
 
 // ═══════════════════════════════════════════════
@@ -1232,7 +1294,12 @@ function printFireList() { window.print(); }
 (async function init() {
   await openDB();
   await seedDefaults();
-  loadSites();
+  if (checkDeviceUnlocked()) {
+    deviceUnlocked = true;
+    showView('view-home');
+  } else {
+    showView('view-device-login');
+  }
 })();
 
 // Register service worker for PWA
