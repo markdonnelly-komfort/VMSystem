@@ -1711,8 +1711,7 @@ async function endRollcall() {
   });
 
   // Save a rollcall record for history
-  await idbPut('audit_log', {
-    id: undefined,
+  await idbAdd('audit_log', {
     timestamp: nowISO(),
     action: 'rollcall_record',
     location_id: rollcallState.locationId,
