@@ -137,6 +137,23 @@
       .fire-header-print { display: block !important; text-align: center; margin-bottom: 20px; }
     }
     .fire-header-print { display: none; }
+
+    /* ─── Rollcall ─── */
+    .rollcall-stats { display: flex; gap: 12px; padding: 16px; flex-wrap: wrap; }
+    .rollcall-stat { flex: 1; min-width: 120px; text-align: center; padding: 12px; border-radius: 12px; }
+    .rollcall-person { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); transition: background 0.2s; }
+    .rollcall-person.accounted { background: #e8f5e9; }
+    .rollcall-person.unaccounted { background: #fff; }
+    .rollcall-check { width: 28px; height: 28px; accent-color: var(--success); cursor: pointer; flex-shrink: 0; }
+    .rollcall-info { flex: 1; min-width: 0; }
+    .rollcall-info .name { font-weight: 600; font-size: 1.05rem; }
+    .rollcall-info .detail { font-size: 0.85rem; color: var(--text-light); }
+    .rollcall-timer { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .rollcall-progress { height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; margin: 0 16px; }
+    .rollcall-progress-bar { height: 100%; background: var(--success); transition: width 0.3s; border-radius: 4px; }
+    .rollcall-site-btn { padding: 20px; border-radius: 12px; font-size: 1.1rem; font-weight: 600; border: 3px solid var(--danger); background: white; color: var(--danger); cursor: pointer; transition: all 0.2s; text-align: center; }
+    .rollcall-site-btn:hover { background: var(--danger); color: white; }
+    .rollcall-site-btn .site-count { font-size: 1.8rem; font-weight: 700; display: block; margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -426,10 +443,69 @@
     <p id="fire-print-time"></p>
   </div>
   <div id="fire-summary" style="display:flex;gap:12px;padding:16px;flex-wrap:wrap;"></div>
+  <!-- Roll Call buttons -->
+  <div style="padding:0 16px 8px;">
+    <h3 style="margin-bottom:10px;">Start Roll Call</h3>
+    <div id="fire-rollcall-buttons" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;"></div>
+  </div>
   <div class="filter-bar" id="fire-filter-bar"></div>
   <div class="content">
     <div id="fire-people-list" class="card"></div>
     <div id="fire-timestamp" style="text-align:center;color:var(--text-light);padding:8px;font-size:0.85rem;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VIEW: Roll Call -->
+<!-- ═══════════════════════════════════════════ -->
+<div id="view-rollcall" class="view">
+  <div class="header" style="background:#c62828;">
+    <div style="display:flex;align-items:center;">
+      <button class="back-btn" onclick="cancelRollcall()">&larr;</button>
+      <div>
+        <h1>&#128293; Roll Call — <span id="rollcall-site-name"></span></h1>
+        <div class="header-sub" id="rollcall-started-label"></div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="rollcall-timer" id="rollcall-timer">00:00</div>
+    </div>
+  </div>
+  <div class="rollcall-stats">
+    <div class="rollcall-stat card" style="background:#e8f5e9;">
+      <div style="font-size:1.8rem;font-weight:700;color:var(--success);" id="rollcall-accounted">0</div>
+      <div style="font-size:0.85rem;">Accounted For</div>
+    </div>
+    <div class="rollcall-stat card" style="background:#ffebee;">
+      <div style="font-size:1.8rem;font-weight:700;color:var(--danger);" id="rollcall-unaccounted">0</div>
+      <div style="font-size:0.85rem;">Unaccounted</div>
+    </div>
+    <div class="rollcall-stat card">
+      <div style="font-size:1.8rem;font-weight:700;color:var(--primary);" id="rollcall-total">0</div>
+      <div style="font-size:0.85rem;">Total On Site</div>
+    </div>
+  </div>
+  <div class="rollcall-progress"><div class="rollcall-progress-bar" id="rollcall-progress-bar" style="width:0%;"></div></div>
+  <div class="content" style="padding-top:8px;">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div id="rollcall-people-list"></div>
+    </div>
+    <div style="padding:16px;text-align:center;">
+      <button class="btn btn-success btn-lg" id="rollcall-end-btn" onclick="endRollcall()" style="width:100%;max-width:400px;">End Roll Call</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- Roll Call Complete Modal -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="rollcall-complete-modal">
+  <div class="modal" style="max-width:550px;">
+    <h2 style="text-align:center;">Roll Call Complete</h2>
+    <div id="rollcall-summary" style="margin:16px 0;"></div>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn btn-primary btn-lg" onclick="closeModal('rollcall-complete-modal'); showView('view-fire');">Return to Dashboard</button>
+    </div>
   </div>
 </div>
 
@@ -1279,6 +1355,15 @@ async function loadFireData() {
     `;
   }
 
+  // Rollcall buttons
+  const rcBtns = document.getElementById('fire-rollcall-buttons');
+  rcBtns.innerHTML = summaryData.map(l => `
+    <button class="rollcall-site-btn" onclick="startRollcall('${l.id}', '${l.name}')">
+      <span class="site-count">${l.total}</span>
+      ${l.name}
+    </button>
+  `).join('');
+
   const now = new Date().toLocaleString('en-GB');
   document.getElementById('fire-timestamp').textContent = `Last refreshed: ${now}`;
   document.getElementById('fire-print-time').textContent = `Generated: ${now}`;
@@ -1287,6 +1372,223 @@ async function loadFireData() {
 function setFireFilter(filter) { fireFilter = filter; loadFireData(); }
 
 function printFireList() { window.print(); }
+
+// ═══════════════════════════════════════════════
+// ROLL CALL
+// ═══════════════════════════════════════════════
+let rollcallState = null; // { locationId, locationName, startTime, timerInterval, people: [{...person, visit, accounted}] }
+
+async function startRollcall(locationId, locationName) {
+  const visits = await idbGetAll('visits');
+  const people = await idbGetAll('people');
+  const active = visits.filter(v => v.location_id === locationId && !v.check_out);
+
+  if (active.length === 0) {
+    toast('No one is currently on site at ' + locationName, 'error');
+    return;
+  }
+
+  const rollcallPeople = active.map(v => {
+    const p = people.find(pp => pp.id === v.person_id) || {};
+    return {
+      person_id: p.id,
+      first_name: p.first_name || '',
+      last_name: p.last_name || '',
+      type: p.type || 'visitor',
+      company: p.company || '',
+      phone: p.phone || '',
+      photo: p.photo || null,
+      host: v.host || '',
+      accounted: false
+    };
+  });
+  rollcallPeople.sort((a, b) => (a.last_name).localeCompare(b.last_name));
+
+  rollcallState = {
+    locationId,
+    locationName,
+    startTime: new Date(),
+    timerInterval: null,
+    people: rollcallPeople
+  };
+
+  document.getElementById('rollcall-site-name').textContent = locationName;
+  document.getElementById('rollcall-started-label').textContent = 'Started ' + rollcallState.startTime.toLocaleTimeString('en-GB');
+
+  // Start timer
+  updateRollcallTimer();
+  rollcallState.timerInterval = setInterval(updateRollcallTimer, 1000);
+
+  logAction('rollcall_started', { location_id: locationId, details: `Roll call started at ${locationName} — ${rollcallPeople.length} people on site` });
+
+  renderRollcall();
+  showView('view-rollcall');
+}
+
+function updateRollcallTimer() {
+  if (!rollcallState) return;
+  const elapsed = Math.floor((new Date() - rollcallState.startTime) / 1000);
+  const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const secs = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('rollcall-timer').textContent = `${mins}:${secs}`;
+}
+
+function renderRollcall() {
+  if (!rollcallState) return;
+  const people = rollcallState.people;
+  const accounted = people.filter(p => p.accounted).length;
+  const unaccounted = people.length - accounted;
+  const pct = people.length > 0 ? Math.round((accounted / people.length) * 100) : 0;
+
+  document.getElementById('rollcall-accounted').textContent = accounted;
+  document.getElementById('rollcall-unaccounted').textContent = unaccounted;
+  document.getElementById('rollcall-total').textContent = people.length;
+  document.getElementById('rollcall-progress-bar').style.width = pct + '%';
+
+  // Sort: unaccounted first, then accounted
+  const sorted = [...people].sort((a, b) => {
+    if (a.accounted !== b.accounted) return a.accounted ? 1 : -1;
+    return a.last_name.localeCompare(b.last_name);
+  });
+
+  const listEl = document.getElementById('rollcall-people-list');
+  listEl.innerHTML = sorted.map((p, i) => {
+    const origIdx = people.indexOf(p);
+    const avatarEl = p.photo
+      ? `<div class="avatar"><img src="${p.photo}" alt=""></div>`
+      : `<div class="avatar">${(p.first_name[0] + p.last_name[0]).toUpperCase()}</div>`;
+    return `
+      <div class="rollcall-person ${p.accounted ? 'accounted' : 'unaccounted'}" onclick="toggleRollcallPerson(${origIdx})">
+        <input type="checkbox" class="rollcall-check" ${p.accounted ? 'checked' : ''} onclick="event.stopPropagation(); toggleRollcallPerson(${origIdx})">
+        ${avatarEl}
+        <div class="rollcall-info">
+          <div class="name">${escHtml(p.first_name)} ${escHtml(p.last_name)}</div>
+          <div class="detail">
+            <span class="badge badge-${p.type}">${p.type}</span>
+            ${p.host ? ' &middot; Visiting: ' + escHtml(p.host) : ''}
+            ${p.company ? ' &middot; ' + escHtml(p.company) : ''}
+          </div>
+          ${p.phone ? `<div class="detail">&#128222; ${escHtml(p.phone)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Update end button text
+  const endBtn = document.getElementById('rollcall-end-btn');
+  if (accounted === people.length) {
+    endBtn.textContent = 'All Accounted — End Roll Call';
+    endBtn.className = 'btn btn-success btn-lg';
+  } else {
+    endBtn.textContent = `End Roll Call (${unaccounted} unaccounted)`;
+    endBtn.className = 'btn btn-danger btn-lg';
+  }
+}
+
+function toggleRollcallPerson(idx) {
+  if (!rollcallState) return;
+  rollcallState.people[idx].accounted = !rollcallState.people[idx].accounted;
+  renderRollcall();
+}
+
+async function endRollcall() {
+  if (!rollcallState) return;
+  const people = rollcallState.people;
+  const accounted = people.filter(p => p.accounted).length;
+  const unaccounted = people.length - accounted;
+
+  if (unaccounted > 0 && !confirm(`${unaccounted} person(s) are still unaccounted for. End the roll call anyway?`)) {
+    return;
+  }
+
+  clearInterval(rollcallState.timerInterval);
+  const endTime = new Date();
+  const durationMs = endTime - rollcallState.startTime;
+  const durationSecs = Math.floor(durationMs / 1000);
+  const durationMins = Math.floor(durationSecs / 60);
+  const durationRemSecs = durationSecs % 60;
+  const durationStr = `${durationMins}m ${durationRemSecs}s`;
+
+  // Build detailed log
+  const accountedNames = people.filter(p => p.accounted).map(p => `${p.first_name} ${p.last_name}`);
+  const unaccountedNames = people.filter(p => !p.accounted).map(p => `${p.first_name} ${p.last_name}`);
+
+  const logDetail = [
+    `Roll call ended at ${rollcallState.locationName}`,
+    `Duration: ${durationStr}`,
+    `Total: ${people.length}, Accounted: ${accounted}, Unaccounted: ${unaccounted}`,
+    unaccountedNames.length > 0 ? `UNACCOUNTED: ${unaccountedNames.join(', ')}` : 'All personnel accounted for'
+  ].join(' | ');
+
+  logAction('rollcall_completed', {
+    location_id: rollcallState.locationId,
+    details: logDetail
+  });
+
+  // Save a rollcall record for history
+  await idbPut('audit_log', {
+    id: undefined,
+    timestamp: nowISO(),
+    action: 'rollcall_record',
+    location_id: rollcallState.locationId,
+    details: JSON.stringify({
+      location: rollcallState.locationName,
+      start: rollcallState.startTime.toISOString(),
+      end: endTime.toISOString(),
+      duration: durationStr,
+      duration_seconds: durationSecs,
+      total: people.length,
+      accounted,
+      unaccounted,
+      accounted_names: accountedNames,
+      unaccounted_names: unaccountedNames,
+      marshal: authUser ? authUser.full_name : 'Unknown'
+    })
+  });
+
+  // Show summary modal
+  const summaryEl = document.getElementById('rollcall-summary');
+  summaryEl.innerHTML = `
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:3rem;">${unaccounted === 0 ? '&#10004;' : '&#9888;'}</div>
+      <h3 style="color:${unaccounted === 0 ? 'var(--success)' : 'var(--danger)'};">
+        ${unaccounted === 0 ? 'All Personnel Accounted For' : unaccounted + ' Person(s) Unaccounted'}
+      </h3>
+    </div>
+    <table style="width:100%;margin-bottom:12px;">
+      <tr><td style="font-weight:500;">Site</td><td>${escHtml(rollcallState.locationName)}</td></tr>
+      <tr><td style="font-weight:500;">Date</td><td>${rollcallState.startTime.toLocaleDateString('en-GB')}</td></tr>
+      <tr><td style="font-weight:500;">Started</td><td>${rollcallState.startTime.toLocaleTimeString('en-GB')}</td></tr>
+      <tr><td style="font-weight:500;">Ended</td><td>${endTime.toLocaleTimeString('en-GB')}</td></tr>
+      <tr><td style="font-weight:500;">Duration</td><td>${durationStr}</td></tr>
+      <tr><td style="font-weight:500;">Total On Site</td><td>${people.length}</td></tr>
+      <tr><td style="font-weight:500;">Accounted For</td><td style="color:var(--success);font-weight:600;">${accounted}</td></tr>
+      ${unaccounted > 0 ? `<tr><td style="font-weight:500;">Unaccounted</td><td style="color:var(--danger);font-weight:600;">${unaccounted}</td></tr>` : ''}
+      <tr><td style="font-weight:500;">Fire Marshal</td><td>${escHtml(authUser ? authUser.full_name : 'Unknown')}</td></tr>
+    </table>
+    ${unaccountedNames.length > 0 ? `
+      <div class="card" style="background:#ffebee;border:1px solid var(--danger);">
+        <strong style="color:var(--danger);">Unaccounted persons:</strong>
+        <ul style="margin-top:8px;padding-left:20px;">
+          ${unaccountedNames.map(n => `<li>${escHtml(n)}</li>`).join('')}
+        </ul>
+      </div>
+    ` : ''}
+  `;
+
+  document.getElementById('rollcall-complete-modal').classList.add('active');
+  rollcallState = null;
+}
+
+function cancelRollcall() {
+  if (rollcallState) {
+    if (!confirm('Cancel the roll call? Progress will be lost.')) return;
+    clearInterval(rollcallState.timerInterval);
+    logAction('rollcall_cancelled', { location_id: rollcallState.locationId, details: `Roll call cancelled at ${rollcallState.locationName}` });
+    rollcallState = null;
+  }
+  showView('view-fire');
+}
 
 // ═══════════════════════════════════════════════
 // INIT
