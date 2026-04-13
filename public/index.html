@@ -438,20 +438,55 @@
       <button class="btn btn-sm btn-white" onclick="doLogout()">Logout</button>
     </div>
   </div>
-  <div class="fire-header-print">
-    <h1>Komfort Partitioning - Fire Evacuation Roll Call</h1>
-    <p id="fire-print-time"></p>
+  <div class="tabs" style="position:sticky;top:60px;z-index:99;">
+    <div class="tab active" data-firetab="fire-tab-dashboard" onclick="switchFireTab(this)">Dashboard</div>
+    <div class="tab" data-firetab="fire-tab-logs" onclick="switchFireTab(this)">Audit Logs</div>
   </div>
-  <div id="fire-summary" style="display:flex;gap:12px;padding:16px;flex-wrap:wrap;"></div>
-  <!-- Roll Call buttons -->
-  <div style="padding:0 16px 8px;">
-    <h3 style="margin-bottom:10px;">Start Roll Call</h3>
-    <div id="fire-rollcall-buttons" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;"></div>
+  <!-- Dashboard tab -->
+  <div id="fire-tab-dashboard" class="fire-tab-content">
+    <div class="fire-header-print">
+      <h1>Komfort Partitioning - Fire Evacuation Roll Call</h1>
+      <p id="fire-print-time"></p>
+    </div>
+    <div id="fire-summary" style="display:flex;gap:12px;padding:16px;flex-wrap:wrap;"></div>
+    <!-- Roll Call buttons -->
+    <div style="padding:0 16px 8px;">
+      <h3 style="margin-bottom:10px;">Start Roll Call</h3>
+      <div id="fire-rollcall-buttons" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;"></div>
+    </div>
+    <div class="filter-bar" id="fire-filter-bar"></div>
+    <div class="content">
+      <div id="fire-people-list" class="card"></div>
+      <div id="fire-timestamp" style="text-align:center;color:var(--text-light);padding:8px;font-size:0.85rem;"></div>
+    </div>
   </div>
-  <div class="filter-bar" id="fire-filter-bar"></div>
-  <div class="content">
-    <div id="fire-people-list" class="card"></div>
-    <div id="fire-timestamp" style="text-align:center;color:var(--text-light);padding:8px;font-size:0.85rem;"></div>
+  <!-- Audit Logs tab -->
+  <div id="fire-tab-logs" class="fire-tab-content" style="display:none;">
+    <div class="content">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <select id="fire-logs-type" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+          <option value="">All Logs</option>
+          <option value="rollcall">Roll Calls Only</option>
+          <option value="check_in">Check Ins</option>
+          <option value="check_out">Check Outs</option>
+          <option value="person_registered">Registrations</option>
+        </select>
+        <select id="fire-logs-location" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+          <option value="">All Locations</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadFireLogs()">Filter</button>
+      </div>
+      <!-- Roll call history cards -->
+      <div id="fire-rollcall-history"></div>
+      <!-- General audit log table -->
+      <div class="card" id="fire-logs-card">
+        <h3 style="margin-bottom:12px;">Activity Log</h3>
+        <div class="table-container"><table id="fire-logs-table">
+          <thead><tr><th>Time</th><th>Action</th><th>Person</th><th>Location</th><th>Details</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1279,6 +1314,103 @@ async function addUser() {
 // FIRE MARSHAL DASHBOARD
 // ═══════════════════════════════════════════════
 let fireFilter = 'all';
+
+function switchFireTab(el) {
+  document.querySelectorAll('#view-fire .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.fire-tab-content').forEach(c => c.style.display = 'none');
+  el.classList.add('active');
+  const tabId = el.dataset.firetab;
+  document.getElementById(tabId).style.display = 'block';
+  if (tabId === 'fire-tab-logs') { loadFireLogLocations(); loadFireLogs(); }
+  if (tabId === 'fire-tab-dashboard') loadFireData();
+}
+
+function loadFireLogLocations() {
+  const sel = document.getElementById('fire-logs-location');
+  sel.innerHTML = '<option value="">All Locations</option>' + LOCATIONS.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+}
+
+async function loadFireLogs() {
+  const typeFilter = document.getElementById('fire-logs-type').value;
+  const locationFilter = document.getElementById('fire-logs-location').value;
+  let logs = await idbGetAll('audit_log');
+  const people = await idbGetAll('people');
+  const pMap = {};
+  people.forEach(p => pMap[p.id] = `${p.first_name} ${p.last_name}`);
+  const locMap = {};
+  LOCATIONS.forEach(l => locMap[l.id] = l.name);
+
+  // Filter
+  if (locationFilter) logs = logs.filter(l => l.location_id === locationFilter);
+  if (typeFilter === 'rollcall') {
+    logs = logs.filter(l => l.action && l.action.startsWith('rollcall'));
+  } else if (typeFilter) {
+    logs = logs.filter(l => l.action === typeFilter);
+  }
+
+  logs.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+  // Roll call history cards (from rollcall_record entries)
+  const rollcallRecords = logs.filter(l => l.action === 'rollcall_record');
+  const historyEl = document.getElementById('fire-rollcall-history');
+
+  if (rollcallRecords.length > 0) {
+    historyEl.innerHTML = '<h3 style="margin-bottom:12px;">Roll Call History</h3>' +
+      rollcallRecords.map(r => {
+        let data;
+        try { data = JSON.parse(r.details); } catch(e) { return ''; }
+        const allAccounted = data.unaccounted === 0;
+        return `
+          <div class="card" style="border-left:4px solid ${allAccounted ? 'var(--success)' : 'var(--danger)'};">
+            <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:8px;">
+              <div>
+                <strong style="font-size:1.05rem;">${escHtml(data.location)}</strong>
+                <span class="badge" style="background:${allAccounted ? '#e8f5e9;color:var(--success)' : '#ffebee;color:var(--danger)'};">
+                  ${allAccounted ? 'All Accounted' : data.unaccounted + ' Unaccounted'}
+                </span>
+              </div>
+              <div style="text-align:right;font-size:0.85rem;color:var(--text-light);">
+                ${new Date(data.start).toLocaleDateString('en-GB')}
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px;font-size:0.9rem;">
+              <div><strong>Started:</strong> ${new Date(data.start).toLocaleTimeString('en-GB')}</div>
+              <div><strong>Ended:</strong> ${new Date(data.end).toLocaleTimeString('en-GB')}</div>
+              <div><strong>Duration:</strong> ${escHtml(data.duration)}</div>
+              <div><strong>Total:</strong> ${data.total}</div>
+              <div><strong>Accounted:</strong> <span style="color:var(--success);font-weight:600;">${data.accounted}</span></div>
+              <div><strong>Unaccounted:</strong> <span style="color:${data.unaccounted > 0 ? 'var(--danger)' : 'var(--text-light)'};font-weight:600;">${data.unaccounted}</span></div>
+              <div><strong>Marshal:</strong> ${escHtml(data.marshal)}</div>
+            </div>
+            ${data.unaccounted_names && data.unaccounted_names.length > 0 ? `
+              <div style="margin-top:8px;padding:8px;background:#ffebee;border-radius:6px;font-size:0.85rem;">
+                <strong style="color:var(--danger);">Unaccounted:</strong> ${data.unaccounted_names.map(n => escHtml(n)).join(', ')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+  } else {
+    historyEl.innerHTML = '';
+  }
+
+  // General log table (exclude rollcall_record to avoid duplication)
+  const tableLogs = logs.filter(l => l.action !== 'rollcall_record').slice(0, 200);
+  const tbody = document.querySelector('#fire-logs-table tbody');
+  if (tableLogs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:20px;">No logs found.</td></tr>';
+  } else {
+    tbody.innerHTML = tableLogs.map(l => `
+      <tr>
+        <td>${formatTime(l.timestamp)}</td>
+        <td>${(l.action || '').replace(/_/g, ' ')}</td>
+        <td>${l.person_id ? escHtml(pMap[l.person_id] || l.person_id) : '—'}</td>
+        <td>${l.location_id ? (locMap[l.location_id] || l.location_id) : '—'}</td>
+        <td>${escHtml(l.details || '—')}</td>
+      </tr>
+    `).join('');
+  }
+}
 
 async function loadFireData() {
   const visits = await idbGetAll('visits');
