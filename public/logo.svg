@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+  <!-- Starburst icon -->
+  <g transform="translate(50,50)">
+    <!-- Grey spokes: left-horizontal, top-left, bottom-left, bottom-right -->
+    <line x1="-32" y1="0" x2="0" y2="0" stroke="#6b5e50" stroke-width="7" stroke-linecap="round"/>
+    <line x1="-23" y1="-23" x2="0" y2="0" stroke="#6b5e50" stroke-width="7" stroke-linecap="round"/>
+    <line x1="-23" y1="23" x2="0" y2="0" stroke="#6b5e50" stroke-width="7" stroke-linecap="round"/>
+    <line x1="23" y1="23" x2="0" y2="0" stroke="#6b5e50" stroke-width="7" stroke-linecap="round"/>
+    <!-- Gold spokes: top-vertical, top-right, right-horizontal, bottom-vertical -->
+    <line x1="0" y1="-32" x2="0" y2="0" stroke="#d4a21f" stroke-width="7" stroke-linecap="round"/>
+    <line x1="23" y1="-23" x2="0" y2="0" stroke="#d4a21f" stroke-width="7" stroke-linecap="round"/>
+    <line x1="32" y1="0" x2="0" y2="0" stroke="#d4a21f" stroke-width="7" stroke-linecap="round"/>
+    <line x1="0" y1="32" x2="0" y2="0" stroke="#d4a21f" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <!-- "komfort" text -->
+  <text x="105" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="48" font-weight="400" fill="#6b5e50" letter-spacing="2">komfort</text>
+</svg>
