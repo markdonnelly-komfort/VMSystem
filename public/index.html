@@ -1185,6 +1185,8 @@ function doDeviceLock() {
   localStorage.removeItem('vm_device_unlocked_by');
   deviceUnlocked = false;
   authUser = null;
+  document.getElementById('device-login-user').value = '';
+  document.getElementById('device-login-pass').value = '';
   showView('view-device-login');
 }
 
