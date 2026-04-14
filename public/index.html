@@ -176,6 +176,9 @@
       <button class="btn btn-primary btn-lg" style="width:100%;" onclick="doDeviceLogin()">Unlock Device</button>
       <p id="device-login-error" style="color:var(--danger);text-align:center;margin-top:12px;display:none;"></p>
     </div>
+    <div style="margin-top:24px;">
+      <button class="btn btn-sm btn-outline" style="border-color:var(--accent);color:var(--accent);" onclick="showView('view-login')">Admin / Fire Marshal Login</button>
+    </div>
   </div>
 </div>
 
@@ -765,7 +768,7 @@ let deviceUnlocked = false;
 // ═══════════════════════════════════════════════
 function showView(viewId) {
   // Guard: require device unlock for all views except device login
-  if (viewId !== 'view-device-login' && !deviceUnlocked) {
+  if (viewId !== 'view-device-login' && viewId !== 'view-login' && !deviceUnlocked) {
     viewId = 'view-device-login';
   }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -1173,7 +1176,7 @@ function doLogout() {
   authUser = null;
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
-  showView('view-home');
+  showView(deviceUnlocked ? 'view-home' : 'view-device-login');
 }
 
 function doDeviceLock() {
