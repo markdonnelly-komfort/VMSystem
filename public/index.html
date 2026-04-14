@@ -767,8 +767,9 @@ let deviceUnlocked = false;
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function showView(viewId) {
-  // Guard: require device unlock for all views except device login
-  if (viewId !== 'view-device-login' && viewId !== 'view-login' && !deviceUnlocked) {
+  // Guard: require device unlock for kiosk views; admin/fire marshal views always allowed
+  const alwaysAllowed = ['view-device-login', 'view-login', 'view-admin', 'view-fire', 'view-rollcall'];
+  if (!alwaysAllowed.includes(viewId) && !deviceUnlocked) {
     viewId = 'view-device-login';
   }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
