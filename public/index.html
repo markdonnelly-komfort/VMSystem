@@ -300,7 +300,110 @@
         <div class="form-group"><label>Host (who are you visiting?)</label><input type="text" id="checkin-host"></div>
         <div class="form-group"><label>Purpose of visit</label><input type="text" id="checkin-purpose"></div>
       </div>
-      <button class="btn btn-success btn-lg" style="width:100%;" onclick="completeCheckin()">Complete Sign In</button>
+      <button id="checkin-action-btn" class="btn btn-success btn-lg" style="width:100%;" onclick="onCheckinAction()">Complete Sign In</button>
+    </div>
+
+    <!-- Contractor permit-to-work / site rules step -->
+    <div id="checkin-permit" class="card" style="display:none;">
+      <h2 style="color:var(--primary);margin-bottom:4px;">Site Rules &amp; Permit to Work</h2>
+      <p style="color:var(--text-light);margin-bottom:16px;">For Contractors &amp; Visitors</p>
+
+      <div class="permit-rules" style="background:var(--bg);border-left:4px solid var(--accent);padding:16px 20px;border-radius:8px;max-height:50vh;overflow-y:auto;line-height:1.55;">
+        <p>This is a brief outline of relevant information for visitors and contractors attending Komfort Partitioning business sites. All visitors and contractors must report to reception and sign in. Please ensure when leaving site, you sign out.</p>
+        <p>It is the responsibility of the manager/employee who invited/organised the contractor on site, to ensure that the permit documentation is completed in full and prior to any work commencing.</p>
+        <p><strong>The site speed limit is 5mph.</strong></p>
+        <p>Smoking or vaping is only allowed in the smoking shelter or designated areas.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Fire and Evacuation</h3>
+        <p>If the fire alarm siren sounds for more than 20 seconds, stop work, evacuate immediately via the nearest safe exit and report to the fire marshal at the fire assembly point located outside the main reception, meeting point C.</p>
+        <p><strong>Do not re-enter the building until you have been told it is safe to do so.</strong></p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">PPE (Personal Protective Equipment)</h3>
+        <ul style="margin-left:20px;">
+          <li>Safety footwear with toe protection is <strong>MANDATORY</strong> on site.</li>
+          <li>Hearing protection is <strong>MANDATORY</strong> in all hearing protection zones. Hearing protection will be provided at the entrance to the zones.</li>
+          <li>High visibility jacket / vest is <strong>MANDATORY</strong> on site.</li>
+        </ul>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Contractors on site</h3>
+        <p>All contractors working on site must provide appropriate / suitable PPE that offers protection against additional hazards. This must be identified in the permit to work documentation.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Equipment</h3>
+        <p>All tools and equipment brought onto site must comply with acceptable standards of safety. Komfort reserves the right to examine all equipment. Contractors are not permitted to use Komfort Partitioning equipment, unless agreed in advance.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Disturbance / Housekeeping</h3>
+        <p>Noisy operations are only permitted within the timeframes agreed and set out by a representative of Komfort Partitioning Limited. Contractors must observe high standards of cleanliness throughout the site, and work areas must be kept tidy.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Vehicles</h3>
+        <p>Komfort Partitioning assumes no responsibility for loss or damage to any vehicles. Vehicles are not permitted inside the factory areas without first seeking permission from a representative of Komfort Partitioning.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Pedestrian Safety</h3>
+        <p>Always use the pedestrian gangways / walkways. Avoid walking on oil, water and materials in work waiting areas. Side loaders and forklift trucks are always in use in our warehouse and outside yard areas — please be vigilant at all times.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Working at Height</h3>
+        <p>Following a risk assessment, suitable precautions must be taken when working at height. Ladders are not permitted above 1.8 metres. If lifting equipment is required on site, the operator must hold a valid IPAF certificate. Fall arrest systems must be used when working at 1.8 metres or more above ground floor. Lifting equipment must not obstruct emergency equipment or escape routes.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Accidents and Incidents</h3>
+        <p>All injuries to persons or incidents involving damage to site buildings or equipment must be reported to a Komfort Partitioning First Aid representative immediately. In the event of an accident / injury, first aid treatment will be made available by one of our qualified First Aiders.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Near Miss</h3>
+        <p>All near miss issues or incidents must be reported via the near miss report sheet, located on our notice boards.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Asbestos</h3>
+        <p>If asbestos is found before commencing or during work, all work should stop immediately, and the area secured to prevent unauthorised access for further investigation.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Catering</h3>
+        <p>Visitors / contractors may use the site facilities for rest periods. No intoxicating liquor or drugs are permitted on site.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Disabilities</h3>
+        <p>Any visitor or contractor with known disabilities must inform their representative of their specific disability, enabling KPL to assess their individual health and safety requirements. All information given will be held in the strictest confidence.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Materials</h3>
+        <p>All materials brought onto site must be authorised prior to use.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Waste</h3>
+        <p>Waste generated on site is separated into several waste streams. Please ensure that any waste produced is placed in the appropriate container — if in doubt, please ask. Waste streams include:</p>
+        <ul style="margin-left:20px;">
+          <li>Diesel / Oil</li>
+          <li>Hazardous Chemicals</li>
+          <li>Metal (ferrous / non-ferrous)</li>
+          <li>WEEE (Waste Electrical and Electronic Equipment)</li>
+          <li>General waste / mixed recycling</li>
+          <li>Wood</li>
+          <li>Cardboard / paper</li>
+        </ul>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Spillages</h3>
+        <ul style="margin-left:20px;">
+          <li>All spillages must be cleaned up immediately.</li>
+          <li>Major spillages must be reported immediately.</li>
+        </ul>
+        <p>Spill kits are placed around the site (yellow bin containers). Used spill kits must be placed into a hazardous waste container for specialist disposal.</p>
+
+        <p style="background:var(--accent);color:var(--primary);padding:12px;border-radius:6px;margin-top:16px;font-weight:600;">Failure to observe any of these instructions may result in your instant and permanent removal from site.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Important contact details</h3>
+        <ul style="margin-left:20px;">
+          <li>Aaron Neale &mdash; Production &mdash; 07429 631242</li>
+          <li>Robert Reader &mdash; Conformance &mdash; 07593 436276</li>
+        </ul>
+      </div>
+
+      <div style="margin-top:20px;padding:16px;background:var(--bg);border-radius:8px;">
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:12px;">
+          <input type="checkbox" id="permit-check-rules" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updatePermitButton()">
+          <span>I have read the site rules for Contractors</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+          <input type="checkbox" id="permit-check-ptw" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updatePermitButton()">
+          <span>I have completed the permit to work and provided this to the Komfort representative</span>
+        </label>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="cancelPermit()">Back</button>
+        <button id="permit-complete-btn" class="btn btn-success btn-lg" style="flex:2;" onclick="completeCheckin()" disabled>Complete Sign In</button>
+      </div>
     </div>
 
     <div id="checkin-step3" class="card" style="display:none;text-align:center;">
@@ -890,9 +993,14 @@ function resetCheckinFlow() {
   document.getElementById('checkin-step1').style.display = 'block';
   document.getElementById('checkin-register').style.display = 'none';
   document.getElementById('checkin-step2').style.display = 'none';
+  document.getElementById('checkin-permit').style.display = 'none';
   document.getElementById('checkin-step3').style.display = 'none';
   document.getElementById('checkin-host').value = '';
   document.getElementById('checkin-purpose').value = '';
+  document.getElementById('permit-check-rules').checked = false;
+  document.getElementById('permit-check-ptw').checked = false;
+  const permitBtn = document.getElementById('permit-complete-btn');
+  if (permitBtn) permitBtn.disabled = true;
   const si = document.getElementById('checkin-search');
   si.oninput = debounce(searchPeople, 300);
   setTimeout(() => si.focus(), 100);
@@ -957,6 +1065,40 @@ function showCheckinStep2() {
   }
   // Hide host/purpose fields for employees, show for visitors and contractors
   document.getElementById('checkin-visitor-fields').style.display = currentPerson.type === 'employee' ? 'none' : 'block';
+  // Contractors get a "Permit to Work" button instead of "Complete Sign In"
+  const actionBtn = document.getElementById('checkin-action-btn');
+  actionBtn.textContent = currentPerson.type === 'contractor' ? 'Permit to Work' : 'Complete Sign In';
+}
+
+// Routes the step-2 button: contractors -> permit screen, others -> complete
+function onCheckinAction() {
+  if (currentPerson && currentPerson.type === 'contractor') {
+    showPermitStep();
+  } else {
+    completeCheckin();
+  }
+}
+
+function showPermitStep() {
+  document.getElementById('checkin-step2').style.display = 'none';
+  document.getElementById('checkin-permit').style.display = 'block';
+  document.getElementById('permit-check-rules').checked = false;
+  document.getElementById('permit-check-ptw').checked = false;
+  document.getElementById('permit-complete-btn').disabled = true;
+  // Scroll rules to top
+  const rules = document.querySelector('#checkin-permit .permit-rules');
+  if (rules) rules.scrollTop = 0;
+}
+
+function updatePermitButton() {
+  const rules = document.getElementById('permit-check-rules').checked;
+  const ptw = document.getElementById('permit-check-ptw').checked;
+  document.getElementById('permit-complete-btn').disabled = !(rules && ptw);
+}
+
+function cancelPermit() {
+  document.getElementById('checkin-permit').style.display = 'none';
+  document.getElementById('checkin-step2').style.display = 'block';
 }
 
 function showRegisterForm() {
@@ -1013,10 +1155,19 @@ async function completeCheckin() {
     host: document.getElementById('checkin-host').value.trim(),
     purpose: document.getElementById('checkin-purpose').value.trim()
   };
+  // Record contractor permit acknowledgement
+  if (currentPerson.type === 'contractor') {
+    visit.permit_acknowledged = true;
+    visit.permit_acknowledged_at = nowISO();
+  }
   await idbPut('visits', visit);
-  logAction('check_in', { person_id: currentPerson.id, location_id: currentLocation.id, visit_id: visit.id, details: `${currentPerson.first_name} ${currentPerson.last_name} signed in at ${currentLocation.name}` });
+  const logDetails = currentPerson.type === 'contractor'
+    ? `${currentPerson.first_name} ${currentPerson.last_name} (contractor) signed in at ${currentLocation.name} — site rules read & permit to work confirmed`
+    : `${currentPerson.first_name} ${currentPerson.last_name} signed in at ${currentLocation.name}`;
+  logAction('check_in', { person_id: currentPerson.id, location_id: currentLocation.id, visit_id: visit.id, details: logDetails });
 
   document.getElementById('checkin-step2').style.display = 'none';
+  document.getElementById('checkin-permit').style.display = 'none';
   document.getElementById('checkin-step3').style.display = 'block';
   document.getElementById('checkin-confirm-msg').textContent =
     `${currentPerson.first_name} ${currentPerson.last_name} is now signed in at ${currentLocation.name}.`;
