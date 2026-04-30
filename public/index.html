@@ -89,6 +89,7 @@
     .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
     .badge-employee { background: #e4e6e8; color: var(--primary); }
     .badge-visitor { background: var(--accent); color: var(--primary); }
+    .badge-contractor { background: var(--primary-light); color: var(--accent); }
 
     .camera-container { position: relative; width: 100%; max-width: 400px; margin: 0 auto; }
     .camera-container video, .camera-container canvas { width: 100%; border-radius: 12px; }
@@ -272,6 +273,7 @@
         <select id="reg-type">
           <option value="visitor">Visitor</option>
           <option value="employee">Employee</option>
+          <option value="contractor">Contractor</option>
         </select>
       </div>
       <div class="form-group"><label>First Name *</label><input type="text" id="reg-first"></div>
@@ -388,6 +390,7 @@
           <option value="">All Types</option>
           <option value="employee">Employees</option>
           <option value="visitor">Visitors</option>
+          <option value="contractor">Contractors</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="loadAdminPeople()">Search</button>
       </div>
@@ -619,6 +622,7 @@
       <select id="edit-person-type">
         <option value="visitor">Visitor</option>
         <option value="employee">Employee</option>
+        <option value="contractor">Contractor</option>
       </select>
     </div>
     <div class="form-group"><label>First Name *</label><input type="text" id="edit-person-first"></div>
@@ -951,7 +955,7 @@ function showCheckinStep2() {
   } else {
     av.textContent = (currentPerson.first_name[0] + currentPerson.last_name[0]).toUpperCase();
   }
-  // Hide host/purpose fields for employees, show for visitors
+  // Hide host/purpose fields for employees, show for visitors and contractors
   document.getElementById('checkin-visitor-fields').style.display = currentPerson.type === 'employee' ? 'none' : 'block';
 }
 
@@ -1602,7 +1606,8 @@ async function loadFireData() {
       ...loc,
       total: locActive.length,
       employees: locPeople.filter(p => p.type === 'employee').length,
-      visitors: locPeople.filter(p => p.type === 'visitor').length
+      visitors: locPeople.filter(p => p.type === 'visitor').length,
+      contractors: locPeople.filter(p => p.type === 'contractor').length
     };
   });
 
@@ -1615,7 +1620,7 @@ async function loadFireData() {
     <div class="card" style="flex:1;min-width:140px;text-align:center;">
       <div style="font-size:2rem;font-weight:700;color:var(--primary);">${l.total}</div>
       <div style="font-weight:500;">${l.name}</div>
-      <div style="font-size:0.8rem;color:var(--text-light);">${l.employees} emp / ${l.visitors} vis</div>
+      <div style="font-size:0.8rem;color:var(--text-light);">${l.employees} emp / ${l.visitors} vis / ${l.contractors} con</div>
     </div>
   `).join('');
 
