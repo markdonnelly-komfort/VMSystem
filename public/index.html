@@ -727,7 +727,8 @@
 <div class="modal-overlay" id="rollcall-detail-modal">
   <div class="modal" style="max-width:600px;">
     <div id="rollcall-detail-content"></div>
-    <div class="modal-actions" style="justify-content:center;">
+    <div class="modal-actions" style="justify-content:center;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-accent" onclick="printRollcallPdfFromModal()">&#128424; Print to PDF</button>
       <button class="btn btn-primary" onclick="closeModal('rollcall-detail-modal')">Close</button>
     </div>
   </div>
@@ -2058,8 +2059,9 @@ async function loadFireLogs() {
               <div><strong>Unaccounted:</strong> <span style="color:${data.unaccounted > 0 ? 'var(--danger)' : 'var(--text-light)'};font-weight:600;">${data.unaccounted}</span></div>
               <div><strong>Marshal:</strong> ${escHtml(data.marshal)}</div>
             </div>
-            <div style="margin-top:10px;">
+            <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn btn-outline btn-sm" onclick='showRollcallDetail(${JSON.stringify(JSON.stringify(data))})'>View Full Details</button>
+              <button class="btn btn-accent btn-sm" onclick='printRollcallPdf(${JSON.stringify(JSON.stringify(data))})'>&#128424; Print to PDF</button>
             </div>
           </div>
         `;
@@ -2086,8 +2088,10 @@ async function loadFireLogs() {
   }
 }
 
+let _currentRollcallDetail = null;
 function showRollcallDetail(jsonStr) {
   const data = JSON.parse(jsonStr);
+  _currentRollcallDetail = data;
   const allAccounted = data.unaccounted === 0;
   const el = document.getElementById('rollcall-detail-content');
   el.innerHTML = `
@@ -2127,6 +2131,129 @@ function showRollcallDetail(jsonStr) {
     ` : ''}
   `;
   document.getElementById('rollcall-detail-modal').classList.add('active');
+}
+
+function printRollcallPdfFromModal() {
+  if (_currentRollcallDetail) printRollcallPdf(JSON.stringify(_currentRollcallDetail));
+}
+
+function printRollcallPdf(jsonStr) {
+  const data = JSON.parse(jsonStr);
+  const allAccounted = data.unaccounted === 0;
+  const startDate = new Date(data.start);
+  const endDate = new Date(data.end);
+  const dateStr = startDate.toLocaleDateString('en-GB');
+  const startTimeStr = startDate.toLocaleTimeString('en-GB');
+  const endTimeStr = endDate.toLocaleTimeString('en-GB');
+  const stamp = `${startDate.getFullYear()}${String(startDate.getMonth()+1).padStart(2,'0')}${String(startDate.getDate()).padStart(2,'0')}-${String(startDate.getHours()).padStart(2,'0')}${String(startDate.getMinutes()).padStart(2,'0')}`;
+  const safeLoc = String(data.location || 'site').replace(/[^A-Za-z0-9_-]/g, '_');
+  const filename = `RollCall-${safeLoc}-${stamp}`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${filename}</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #404042; margin: 0; padding: 0; line-height: 1.4; }
+  .brand { display:flex; align-items:center; justify-content:space-between; border-bottom: 4px solid #FDC82F; padding-bottom: 12px; margin-bottom: 18px; }
+  .brand .title { font-size: 20pt; font-weight: 700; color: #404042; }
+  .brand .sub { color: #757677; font-size: 10pt; margin-top: 4px; }
+  .brand img { height: 56px; }
+  h1 { font-size: 18pt; margin: 0 0 6px 0; color: #404042; }
+  .status-banner { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-weight: 700; font-size: 12pt; text-align: center; }
+  .status-ok { background: #e8f5e9; color: #1b5e20; border: 1px solid #66bb6a; }
+  .status-warn { background: #ffebee; color: #b71c1c; border: 1px solid #ef5350; }
+  table.meta { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  table.meta td { padding: 6px 10px; border-bottom: 1px solid #dfe2e4; font-size: 10pt; }
+  table.meta td.label { font-weight: 600; color: #565A5C; width: 35%; background: #F4F6F7; }
+  .section { margin-top: 18px; page-break-inside: avoid; }
+  .section h2 { font-size: 12pt; margin: 0 0 8px 0; padding: 8px 12px; border-radius: 4px; }
+  .section.accounted h2 { background: #e8f5e9; color: #1b5e20; }
+  .section.unaccounted h2 { background: #ffebee; color: #b71c1c; }
+  ol { padding-left: 28px; margin: 0; }
+  ol li { padding: 3px 0; font-size: 10.5pt; }
+  .unaccounted ol li { font-weight: 700; }
+  .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #dfe2e4; color: #757677; font-size: 9pt; display: flex; justify-content: space-between; }
+  .sig { margin-top: 30px; page-break-inside: avoid; }
+  .sig-row { display: flex; gap: 30px; margin-top: 18px; }
+  .sig-row .sig-box { flex: 1; }
+  .sig-row .line { border-bottom: 1px solid #404042; height: 28px; }
+  .sig-row .label { font-size: 9pt; color: #757677; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="brand">
+    <div>
+      <h1>Fire Evacuation Roll Call</h1>
+      <div class="sub">Komfort Partitioning &mdash; ${escHtml(data.location)}</div>
+    </div>
+    <img src="/logo.svg" alt="Komfort">
+  </div>
+
+  <div class="status-banner ${allAccounted ? 'status-ok' : 'status-warn'}">
+    ${allAccounted ? 'All Personnel Accounted For' : data.unaccounted + ' Unaccounted'}
+  </div>
+
+  <table class="meta">
+    <tr><td class="label">Location</td><td>${escHtml(data.location)}</td></tr>
+    <tr><td class="label">Date</td><td>${dateStr}</td></tr>
+    <tr><td class="label">Started</td><td>${startTimeStr}</td></tr>
+    <tr><td class="label">Ended</td><td>${endTimeStr}</td></tr>
+    <tr><td class="label">Duration</td><td>${escHtml(data.duration)}</td></tr>
+    <tr><td class="label">Fire Marshal</td><td>${escHtml(data.marshal)}</td></tr>
+    <tr><td class="label">Total On Site</td><td>${data.total}</td></tr>
+    <tr><td class="label">Accounted For</td><td>${data.accounted}</td></tr>
+    <tr><td class="label">Unaccounted</td><td>${data.unaccounted}</td></tr>
+  </table>
+
+  ${data.accounted_names && data.accounted_names.length ? `
+    <div class="section accounted">
+      <h2>&#10004; Accounted For (${data.accounted_names.length})</h2>
+      <ol>
+        ${data.accounted_names.map(n => `<li>${escHtml(n)}</li>`).join('')}
+      </ol>
+    </div>
+  ` : ''}
+
+  ${data.unaccounted_names && data.unaccounted_names.length ? `
+    <div class="section unaccounted">
+      <h2>&#9888; Unaccounted (${data.unaccounted_names.length})</h2>
+      <ol>
+        ${data.unaccounted_names.map(n => `<li>${escHtml(n)}</li>`).join('')}
+      </ol>
+    </div>
+  ` : ''}
+
+  <div class="sig">
+    <div class="sig-row">
+      <div class="sig-box"><div class="line"></div><div class="label">Fire Marshal signature</div></div>
+      <div class="sig-box"><div class="line"></div><div class="label">Date / Time</div></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>Generated ${new Date().toLocaleString('en-GB')}</div>
+    <div>${escHtml(filename)}</div>
+  </div>
+
+<script>
+  window.onload = function() {
+    document.title = ${JSON.stringify(filename)};
+    setTimeout(function(){ window.focus(); window.print(); }, 200);
+  };
+  window.onafterprint = function() { setTimeout(function(){ window.close(); }, 100); };
+</script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('Please allow pop-ups to print', 'error'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 
 async function loadFireData() {
