@@ -2239,13 +2239,13 @@ function printRollcallPdf(jsonStr) {
     <div>${escHtml(filename)}</div>
   </div>
 
-<script>
+<scr` + `ipt>
   window.onload = function() {
     document.title = ${JSON.stringify(filename)};
     setTimeout(function(){ window.focus(); window.print(); }, 200);
   };
   window.onafterprint = function() { setTimeout(function(){ window.close(); }, 100); };
-</script>
+</scr` + `ipt>
 </body>
 </html>`;
 
