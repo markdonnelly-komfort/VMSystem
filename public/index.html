@@ -2241,10 +2241,7 @@ function printRollcallPdf(jsonStr) {
   ` : ''}
 
   <div class="sig">
-    <div class="sig-row">
-      <div class="sig-box"><div class="line"></div><div class="label">Fire Marshal signature</div></div>
-      <div class="sig-box"><div class="line"></div><div class="label">Date / Time</div></div>
-    </div>
+    <p style="margin:0;font-size:11pt;">Completed by <strong>${escHtml(data.marshal)}</strong> on ${endDate.toLocaleString('en-GB')}</p>
   </div>
 
   <div class="footer">
