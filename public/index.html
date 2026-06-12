@@ -2065,6 +2065,45 @@ function cancelRollcall() {
   }
 })();
 
+// Global Enter-to-submit: pressing Enter clicks the primary action button
+// on the currently visible card or modal.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.isComposing) return;
+  const t = e.target;
+  const tag = (t.tagName || '').toLowerCase();
+  // Allow newlines in textareas; let buttons/links handle their own Enter
+  if (tag === 'textarea' || tag === 'button' || tag === 'a' || tag === 'select') return;
+  if (t.hasAttribute && t.hasAttribute('data-no-enter')) return;
+
+  // Prefer an active modal; otherwise use the active view
+  let container = document.querySelector('.modal-overlay.active');
+  if (!container) container = document.querySelector('.view.active');
+  if (!container) return;
+
+  // Scope to the closest visible card/modal containing the focused element
+  let scope = t.closest ? t.closest('.card, .modal') : null;
+  if (!scope || !container.contains(scope)) {
+    const candidates = container.querySelectorAll('.card, .modal');
+    for (const c of candidates) {
+      if (c.offsetParent !== null) { scope = c; break; }
+    }
+  }
+  if (!scope) scope = container;
+
+  // Look for primary action: success > accent > primary
+  const selectors = ['.btn-success', '.btn-accent', '.btn-primary'];
+  for (const sel of selectors) {
+    const btns = scope.querySelectorAll(sel);
+    for (const b of btns) {
+      if (b.disabled) continue;
+      if (b.offsetParent === null) continue;
+      e.preventDefault();
+      b.click();
+      return;
+    }
+  }
+});
+
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
