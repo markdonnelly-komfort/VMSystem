@@ -406,6 +406,51 @@
       </div>
     </div>
 
+    <!-- Visitor H&S rules step -->
+    <div id="checkin-hsrules" class="card" style="display:none;">
+      <h2 style="color:var(--primary);margin-bottom:4px;">Health &amp; Safety Rules</h2>
+      <p style="color:var(--text-light);margin-bottom:16px;">For Visitors</p>
+
+      <div class="permit-rules" style="background:var(--bg);border-left:4px solid var(--accent);padding:16px 20px;border-radius:8px;max-height:50vh;overflow-y:auto;line-height:1.55;">
+        <p>This is a brief outline of relevant information for visitors attending Komfort Partitioning business sites. Please ensure when leaving site, you sign out.</p>
+        <p>All visitors will be asked to remain in reception, until the person(s) they have come to see collects them.</p>
+        <p>Visitors must not enter the factory / warehouse areas without the appropriate PPE.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Common Site Hazards for visitors include</h3>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Vehicle Movement Hazards</h3>
+        <p>Vehicles like forklifts and delivery vans operate with limited visibility. Visitors must stay alert and use pedestrian routes. Visitors must also wear a High Visibility Vest / Jacket.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Noise</h3>
+        <p>Noise from heavy machinery during manufacturing operations is common. Visitors must ensure ear protection is worn in the mandatory Ear Protection Areas.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Slips, Trips and Falls</h3>
+        <p>Slips, trips, and falls from cables, spills, or uneven surfaces. Visitors must stay within marked walkways, watch footing, and do not enter work areas.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Machinery</h3>
+        <p>Visitors must keep a safe distance, do not touch machines, and follow barriers / signage.</p>
+        <p><strong>Welding</strong> &mdash; Visitors must not look directly at welding operations and must respect welding screens / barriers.</p>
+
+        <h3 style="color:var(--primary);margin-top:16px;">Site Plan &amp; Fire Drill Instructions</h3>
+        <p>The site plan can be found in the reception area.</p>
+        <p>If the fire alarm siren sounds for more than 20 seconds, stop work, evacuate immediately via the nearest safe exit and report to the fire marshal at the fire assembly point located outside the main reception, meeting point C.</p>
+
+        <p style="background:var(--accent);color:var(--primary);padding:12px;border-radius:6px;margin-top:16px;font-weight:600;">Failure to observe any of these instructions may result in your instant and permanent removal from site.</p>
+      </div>
+
+      <div style="margin-top:20px;padding:16px;background:var(--bg);border-radius:8px;">
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+          <input type="checkbox" id="hsrules-check" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updateHsrulesButton()">
+          <span>I have read the site rules for Visitors</span>
+        </label>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="cancelHsrules()">Back</button>
+        <button id="hsrules-complete-btn" class="btn btn-success btn-lg" style="flex:2;" onclick="completeCheckin()" disabled>Complete Sign In</button>
+      </div>
+    </div>
+
     <div id="checkin-step3" class="card" style="display:none;text-align:center;">
       <div style="font-size:4rem;color:var(--success);">&#10004;</div>
       <h2 style="margin:12px 0;">Welcome!</h2>
@@ -994,6 +1039,7 @@ function resetCheckinFlow() {
   document.getElementById('checkin-register').style.display = 'none';
   document.getElementById('checkin-step2').style.display = 'none';
   document.getElementById('checkin-permit').style.display = 'none';
+  document.getElementById('checkin-hsrules').style.display = 'none';
   document.getElementById('checkin-step3').style.display = 'none';
   document.getElementById('checkin-host').value = '';
   document.getElementById('checkin-purpose').value = '';
@@ -1001,6 +1047,10 @@ function resetCheckinFlow() {
   document.getElementById('permit-check-ptw').checked = false;
   const permitBtn = document.getElementById('permit-complete-btn');
   if (permitBtn) permitBtn.disabled = true;
+  const hsCheck = document.getElementById('hsrules-check');
+  if (hsCheck) hsCheck.checked = false;
+  const hsBtn = document.getElementById('hsrules-complete-btn');
+  if (hsBtn) hsBtn.disabled = true;
   const si = document.getElementById('checkin-search');
   si.oninput = debounce(searchPeople, 300);
   setTimeout(() => si.focus(), 100);
@@ -1065,18 +1115,19 @@ function showCheckinStep2() {
   }
   // Hide host/purpose fields for employees, show for visitors and contractors
   document.getElementById('checkin-visitor-fields').style.display = currentPerson.type === 'employee' ? 'none' : 'block';
-  // Contractors get a "Permit to Work" button instead of "Complete Sign In"
+  // Contractors get "Permit to Work", Visitors get "H&S Rules", Employees get "Complete Sign In"
   const actionBtn = document.getElementById('checkin-action-btn');
-  actionBtn.textContent = currentPerson.type === 'contractor' ? 'Permit to Work' : 'Complete Sign In';
+  if (currentPerson.type === 'contractor') actionBtn.textContent = 'Permit to Work';
+  else if (currentPerson.type === 'visitor') actionBtn.textContent = 'H&S Rules';
+  else actionBtn.textContent = 'Complete Sign In';
 }
 
-// Routes the step-2 button: contractors -> permit screen, others -> complete
+// Routes the step-2 button by type
 function onCheckinAction() {
-  if (currentPerson && currentPerson.type === 'contractor') {
-    showPermitStep();
-  } else {
-    completeCheckin();
-  }
+  if (!currentPerson) return;
+  if (currentPerson.type === 'contractor') showPermitStep();
+  else if (currentPerson.type === 'visitor') showHsrulesStep();
+  else completeCheckin();
 }
 
 function showPermitStep() {
@@ -1098,6 +1149,24 @@ function updatePermitButton() {
 
 function cancelPermit() {
   document.getElementById('checkin-permit').style.display = 'none';
+  document.getElementById('checkin-step2').style.display = 'block';
+}
+
+function showHsrulesStep() {
+  document.getElementById('checkin-step2').style.display = 'none';
+  document.getElementById('checkin-hsrules').style.display = 'block';
+  document.getElementById('hsrules-check').checked = false;
+  document.getElementById('hsrules-complete-btn').disabled = true;
+  const rules = document.querySelector('#checkin-hsrules .permit-rules');
+  if (rules) rules.scrollTop = 0;
+}
+
+function updateHsrulesButton() {
+  document.getElementById('hsrules-complete-btn').disabled = !document.getElementById('hsrules-check').checked;
+}
+
+function cancelHsrules() {
+  document.getElementById('checkin-hsrules').style.display = 'none';
   document.getElementById('checkin-step2').style.display = 'block';
 }
 
@@ -1155,19 +1224,28 @@ async function completeCheckin() {
     host: document.getElementById('checkin-host').value.trim(),
     purpose: document.getElementById('checkin-purpose').value.trim()
   };
-  // Record contractor permit acknowledgement
+  // Record contractor permit / visitor H&S acknowledgement
   if (currentPerson.type === 'contractor') {
     visit.permit_acknowledged = true;
     visit.permit_acknowledged_at = nowISO();
+  } else if (currentPerson.type === 'visitor') {
+    visit.hs_rules_acknowledged = true;
+    visit.hs_rules_acknowledged_at = nowISO();
   }
   await idbPut('visits', visit);
-  const logDetails = currentPerson.type === 'contractor'
-    ? `${currentPerson.first_name} ${currentPerson.last_name} (contractor) signed in at ${currentLocation.name} — site rules read & permit to work confirmed`
-    : `${currentPerson.first_name} ${currentPerson.last_name} signed in at ${currentLocation.name}`;
+  let logDetails;
+  if (currentPerson.type === 'contractor') {
+    logDetails = `${currentPerson.first_name} ${currentPerson.last_name} (contractor) signed in at ${currentLocation.name} — site rules read & permit to work confirmed`;
+  } else if (currentPerson.type === 'visitor') {
+    logDetails = `${currentPerson.first_name} ${currentPerson.last_name} (visitor) signed in at ${currentLocation.name} — H&S rules read & acknowledged`;
+  } else {
+    logDetails = `${currentPerson.first_name} ${currentPerson.last_name} signed in at ${currentLocation.name}`;
+  }
   logAction('check_in', { person_id: currentPerson.id, location_id: currentLocation.id, visit_id: visit.id, details: logDetails });
 
   document.getElementById('checkin-step2').style.display = 'none';
   document.getElementById('checkin-permit').style.display = 'none';
+  document.getElementById('checkin-hsrules').style.display = 'none';
   document.getElementById('checkin-step3').style.display = 'block';
   document.getElementById('checkin-confirm-msg').textContent =
     `${currentPerson.first_name} ${currentPerson.last_name} is now signed in at ${currentLocation.name}.`;
