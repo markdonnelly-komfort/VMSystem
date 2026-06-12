@@ -565,9 +565,15 @@
         <select id="admin-visits-location" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
           <option value="">All Locations</option>
         </select>
+        <select id="admin-visits-status" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+          <option value="">All Statuses</option>
+          <option value="on">On Site</option>
+          <option value="off">Not On Site</option>
+        </select>
         <input type="date" id="admin-visits-from" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
         <input type="date" id="admin-visits-to" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
         <button class="btn btn-primary btn-sm" onclick="loadAdminVisits()">Filter</button>
+        <button class="btn btn-accent btn-sm" onclick="exportAdminVisits()">&#128229; Export to Excel</button>
       </div>
       <div class="table-container"><table id="admin-visits-table">
         <thead><tr><th>Name</th><th>Type</th><th>Location</th><th>Check In</th><th>Check Out</th><th>Host</th><th>Purpose</th></tr></thead>
@@ -584,7 +590,13 @@
           <option value="person_deleted">Deletion</option>
           <option value="admin_login">Admin Login</option>
         </select>
+        <select id="admin-logs-location" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+          <option value="">All Locations</option>
+        </select>
+        <input type="date" id="admin-logs-from" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+        <input type="date" id="admin-logs-to" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
         <button class="btn btn-primary btn-sm" onclick="loadAdminLogs()">Filter</button>
+        <button class="btn btn-accent btn-sm" onclick="exportAdminLogs()">&#128229; Export to Excel</button>
       </div>
       <div class="table-container"><table id="admin-logs-table">
         <thead><tr><th>Time</th><th>Action</th><th>Person</th><th>Location</th><th>Details</th></tr></thead>
@@ -649,7 +661,10 @@
         <select id="fire-logs-location" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
           <option value="">All Locations</option>
         </select>
+        <input type="date" id="fire-logs-from" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
+        <input type="date" id="fire-logs-to" style="padding:10px;border:2px solid var(--border);border-radius:8px;">
         <button class="btn btn-primary btn-sm" onclick="loadFireLogs()">Filter</button>
+        <button class="btn btn-accent btn-sm" onclick="exportFireLogs()">&#128229; Export to Excel</button>
       </div>
       <!-- Roll call history cards -->
       <div id="fire-rollcall-history"></div>
@@ -996,6 +1011,31 @@ function formatTime(iso) {
 }
 
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function todayStamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function downloadCsv(rows, filename) {
+  if (!rows || rows.length === 0) { toast('Nothing to export', 'error'); return; }
+  const headers = Object.keys(rows[0]);
+  const esc = v => {
+    if (v == null) return '';
+    const s = String(v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const csv = '﻿' + [headers.join(',')]
+    .concat(rows.map(r => headers.map(h => esc(r[h])).join(',')))
+    .join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 200);
+  toast(`Exported ${rows.length} rows`);
+}
 
 // ═══════════════════════════════════════════════
 // SITE SELECTION
@@ -1618,7 +1658,7 @@ function switchAdminTab(el) {
   document.getElementById(tabId).style.display = 'block';
   if (tabId === 'admin-people') loadAdminPeople();
   if (tabId === 'admin-visits') loadAdminVisits();
-  if (tabId === 'admin-logs') loadAdminLogs();
+  if (tabId === 'admin-logs') { loadAdminLogLocations(); loadAdminLogs(); }
   if (tabId === 'admin-users') loadAdminUsers();
 }
 
@@ -1673,16 +1713,23 @@ function loadAdminLocationFilter() {
   sel.innerHTML = '<option value="">All Locations</option>' + LOCATIONS.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
 }
 
+let _adminVisitsCache = [];
+let _adminVisitsPeopleCache = [];
 async function loadAdminVisits() {
   const locationId = document.getElementById('admin-visits-location').value;
+  const status = document.getElementById('admin-visits-status').value;
   const fromDate = document.getElementById('admin-visits-from').value;
   const toDate = document.getElementById('admin-visits-to').value;
   let visits = await idbGetAll('visits');
   const people = await idbGetAll('people');
   if (locationId) visits = visits.filter(v => v.location_id === locationId);
+  if (status === 'on') visits = visits.filter(v => !v.check_out);
+  else if (status === 'off') visits = visits.filter(v => !!v.check_out);
   if (fromDate) visits = visits.filter(v => v.check_in >= fromDate);
   if (toDate) visits = visits.filter(v => v.check_in <= toDate + 'T23:59:59');
   visits.sort((a, b) => b.check_in.localeCompare(a.check_in));
+  _adminVisitsCache = visits;
+  _adminVisitsPeopleCache = people;
   visits = visits.slice(0, 200);
 
   const locMap = {};
@@ -1703,14 +1750,48 @@ async function loadAdminVisits() {
   }).join('');
 }
 
+function exportAdminVisits() {
+  const locMap = {};
+  LOCATIONS.forEach(l => locMap[l.id] = l.name);
+  const rows = _adminVisitsCache.map(v => {
+    const p = _adminVisitsPeopleCache.find(pp => pp.id === v.person_id) || {};
+    return {
+      'First Name': p.first_name || '',
+      'Last Name': p.last_name || '',
+      'Type': p.type || '',
+      'Company': p.company || '',
+      'Phone': p.phone || '',
+      'Email': p.email || '',
+      'Location': locMap[v.location_id] || v.location_id,
+      'Check In': v.check_in || '',
+      'Check Out': v.check_out || '',
+      'Status': v.check_out ? 'Off site' : 'On site',
+      'Host': v.host || '',
+      'Purpose': v.purpose || ''
+    };
+  });
+  downloadCsv(rows, `visits-${todayStamp()}.csv`);
+}
+
+let _adminLogsCache = [];
+let _adminLogsPeopleCache = [];
 async function loadAdminLogs() {
   const actionFilter = document.getElementById('admin-logs-action').value;
+  const locationFilter = document.getElementById('admin-logs-location').value;
+  const fromDate = document.getElementById('admin-logs-from').value;
+  const toDate = document.getElementById('admin-logs-to').value;
   let logs = await idbGetAll('audit_log');
   if (actionFilter) logs = logs.filter(l => l.action === actionFilter);
+  if (locationFilter) logs = logs.filter(l => l.location_id === locationFilter);
+  if (fromDate) logs = logs.filter(l => (l.timestamp || '') >= fromDate);
+  if (toDate) logs = logs.filter(l => (l.timestamp || '') <= toDate + 'T23:59:59');
   logs.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-  logs = logs.slice(0, 200);
 
   const people = await idbGetAll('people');
+  _adminLogsCache = logs;
+  _adminLogsPeopleCache = people;
+  logs = logs.slice(0, 200);
+
   const pMap = {};
   people.forEach(p => pMap[p.id] = `${p.first_name} ${p.last_name}`);
   const locMap = {};
@@ -1726,6 +1807,26 @@ async function loadAdminLogs() {
       <td>${escHtml(l.details||'—')}</td>
     </tr>
   `).join('');
+}
+
+function loadAdminLogLocations() {
+  const sel = document.getElementById('admin-logs-location');
+  sel.innerHTML = '<option value="">All Locations</option>' + LOCATIONS.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+}
+
+function exportAdminLogs() {
+  const pMap = {};
+  _adminLogsPeopleCache.forEach(p => pMap[p.id] = `${p.first_name} ${p.last_name}`);
+  const locMap = {};
+  LOCATIONS.forEach(l => locMap[l.id] = l.name);
+  const rows = _adminLogsCache.map(l => ({
+    'Time': l.timestamp || '',
+    'Action': (l.action || '').replace(/_/g, ' '),
+    'Person': l.person_id ? (pMap[l.person_id] || l.person_id) : '',
+    'Location': l.location_id ? (locMap[l.location_id] || l.location_id) : '',
+    'Details': l.details || ''
+  }));
+  downloadCsv(rows, `audit-log-${todayStamp()}.csv`);
 }
 
 async function loadAdminUsers() {
@@ -1882,9 +1983,28 @@ function loadFireLogLocations() {
   sel.innerHTML = '<option value="">All Locations</option>' + LOCATIONS.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
 }
 
+function exportFireLogs() {
+  const pMap = {};
+  _fireLogsPeopleCache.forEach(p => pMap[p.id] = `${p.first_name} ${p.last_name}`);
+  const locMap = {};
+  LOCATIONS.forEach(l => locMap[l.id] = l.name);
+  const rows = _fireLogsCache.map(l => ({
+    'Time': l.timestamp || '',
+    'Action': (l.action || '').replace(/_/g, ' '),
+    'Person': l.person_id ? (pMap[l.person_id] || l.person_id) : '',
+    'Location': l.location_id ? (locMap[l.location_id] || l.location_id) : '',
+    'Details': l.details || ''
+  }));
+  downloadCsv(rows, `fire-audit-log-${todayStamp()}.csv`);
+}
+
+let _fireLogsCache = [];
+let _fireLogsPeopleCache = [];
 async function loadFireLogs() {
   const typeFilter = document.getElementById('fire-logs-type').value;
   const locationFilter = document.getElementById('fire-logs-location').value;
+  const fromDate = document.getElementById('fire-logs-from').value;
+  const toDate = document.getElementById('fire-logs-to').value;
   let logs = await idbGetAll('audit_log');
   const people = await idbGetAll('people');
   const pMap = {};
@@ -1894,6 +2014,8 @@ async function loadFireLogs() {
 
   // Filter
   if (locationFilter) logs = logs.filter(l => l.location_id === locationFilter);
+  if (fromDate) logs = logs.filter(l => (l.timestamp || '') >= fromDate);
+  if (toDate) logs = logs.filter(l => (l.timestamp || '') <= toDate + 'T23:59:59');
   if (typeFilter === 'rollcall') {
     logs = logs.filter(l => l.action && l.action.startsWith('rollcall'));
   } else if (typeFilter) {
@@ -1901,6 +2023,8 @@ async function loadFireLogs() {
   }
 
   logs.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+  _fireLogsCache = logs;
+  _fireLogsPeopleCache = people;
 
   // Roll call history cards (from rollcall_record entries)
   const rollcallRecords = logs.filter(l => l.action === 'rollcall_record');
