@@ -294,11 +294,11 @@
         <span class="badge" id="checkin-person-type"></span>
       </div>
       <div style="text-align:center;margin-bottom:16px;">
-        <button class="btn btn-outline btn-sm" onclick="openCamera()">&#128247; Take / Update Photo</button>
+        <button class="btn btn-outline btn-sm" onclick="openCamera()">&#128247; Take / Update Photo *</button>
       </div>
       <div id="checkin-visitor-fields">
-        <div class="form-group"><label>Host (who are you visiting?)</label><input type="text" id="checkin-host"></div>
-        <div class="form-group"><label>Purpose of visit</label><input type="text" id="checkin-purpose"></div>
+        <div class="form-group"><label>Host (who are you visiting?) *</label><input type="text" id="checkin-host"></div>
+        <div class="form-group"><label>Purpose of visit *</label><input type="text" id="checkin-purpose"></div>
       </div>
       <button id="checkin-action-btn" class="btn btn-success btn-lg" style="width:100%;" onclick="onCheckinAction()">Complete Sign In</button>
     </div>
@@ -1136,9 +1136,21 @@ function showCheckinStep2() {
   else actionBtn.textContent = 'Complete Sign In';
 }
 
-// Routes the step-2 button by type
+// Routes the step-2 button by type, validating mandatory fields first
 function onCheckinAction() {
   if (!currentPerson) return;
+  // Photo is mandatory for everyone
+  if (!capturedPhoto && !currentPerson.photo) {
+    toast('Photo is required — please take a photo', 'error');
+    return;
+  }
+  // Host + purpose mandatory for visitors and contractors
+  if (currentPerson.type !== 'employee') {
+    const host = document.getElementById('checkin-host').value.trim();
+    const purpose = document.getElementById('checkin-purpose').value.trim();
+    if (!host) { toast('Host is required', 'error'); document.getElementById('checkin-host').focus(); return; }
+    if (!purpose) { toast('Purpose of visit is required', 'error'); document.getElementById('checkin-purpose').focus(); return; }
+  }
   if (currentPerson.type === 'contractor') showPermitStep();
   else if (currentPerson.type === 'visitor') showHsrulesStep();
   else completeCheckin();
