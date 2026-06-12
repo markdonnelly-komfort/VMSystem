@@ -397,13 +397,17 @@
         </ul>
       </div>
 
-      <div style="margin-top:20px;padding:16px;background:var(--bg);border-radius:8px;">
+      <div id="permit-scroll-hint" style="margin-top:16px;padding:10px 12px;border-radius:8px;background:#fff3cd;color:#7a4f01;border:1px solid #f1c557;font-size:0.9rem;">
+        &#9432; Please scroll to the bottom of the site rules to continue.
+      </div>
+
+      <div id="permit-checkbox-group" style="margin-top:16px;padding:16px;background:var(--bg);border-radius:8px;opacity:0.5;pointer-events:none;">
         <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:12px;">
-          <input type="checkbox" id="permit-check-rules" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updatePermitButton()">
+          <input type="checkbox" id="permit-check-rules" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updatePermitButton()" disabled>
           <span>I have read the site rules for Contractors</span>
         </label>
         <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
-          <input type="checkbox" id="permit-check-ptw" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updatePermitButton()">
+          <input type="checkbox" id="permit-check-ptw" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updatePermitButton()" disabled>
           <span>The permit to work has been completed and provided to the Komfort representative</span>
         </label>
       </div>
@@ -446,9 +450,13 @@
         <p style="background:var(--accent);color:var(--primary);padding:12px;border-radius:6px;margin-top:16px;font-weight:600;">Failure to observe any of these instructions may result in your instant and permanent removal from site.</p>
       </div>
 
-      <div style="margin-top:20px;padding:16px;background:var(--bg);border-radius:8px;">
+      <div id="hsrules-scroll-hint" style="margin-top:16px;padding:10px 12px;border-radius:8px;background:#fff3cd;color:#7a4f01;border:1px solid #f1c557;font-size:0.9rem;">
+        &#9432; Please scroll to the bottom of the H&amp;S rules to continue.
+      </div>
+
+      <div id="hsrules-checkbox-group" style="margin-top:16px;padding:16px;background:var(--bg);border-radius:8px;opacity:0.5;pointer-events:none;">
         <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
-          <input type="checkbox" id="hsrules-check" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updateHsrulesButton()">
+          <input type="checkbox" id="hsrules-check" style="width:22px;height:22px;margin-top:2px;flex-shrink:0;accent-color:var(--primary-light);" onchange="updateHsrulesButton()" disabled>
           <span>I have read the site rules for Visitors</span>
         </label>
       </div>
@@ -1197,7 +1205,7 @@ async function selectHost(id) {
 }
 
 // Routes the step-2 button by type, validating mandatory fields first
-function onCheckinAction() {
+async function onCheckinAction() {
   if (!currentPerson) return;
   // Photo is mandatory for everyone
   if (!capturedPhoto && !currentPerson.photo) {
@@ -1210,6 +1218,14 @@ function onCheckinAction() {
     const purpose = document.getElementById('checkin-purpose').value.trim();
     if (!hostId) { toast('Please choose a host from the list', 'error'); document.getElementById('checkin-host').focus(); return; }
     if (!purpose) { toast('Purpose of visit is required', 'error'); document.getElementById('checkin-purpose').focus(); return; }
+    // Block progression if the host is not currently signed in at this site
+    const visits = await idbGetAll('visits');
+    const hostOnSite = visits.some(v => v.person_id === hostId && v.location_id === currentLocation.id && !v.check_out);
+    if (!hostOnSite) {
+      toast('Your host is not currently signed in at this site. Please ask reception for assistance.', 'error');
+      document.getElementById('checkin-host-warning').style.display = 'block';
+      return;
+    }
   }
   if (currentPerson.type === 'contractor') showPermitStep();
   else if (currentPerson.type === 'visitor') showHsrulesStep();
@@ -1221,10 +1237,25 @@ function showPermitStep() {
   document.getElementById('checkin-permit').style.display = 'block';
   document.getElementById('permit-check-rules').checked = false;
   document.getElementById('permit-check-ptw').checked = false;
+  document.getElementById('permit-check-rules').disabled = true;
+  document.getElementById('permit-check-ptw').disabled = true;
   document.getElementById('permit-complete-btn').disabled = true;
-  // Scroll rules to top
+  const group = document.getElementById('permit-checkbox-group');
+  group.style.opacity = '0.5';
+  group.style.pointerEvents = 'none';
+  document.getElementById('permit-scroll-hint').style.display = 'block';
+  // Scroll rules to top + wire scroll gate
   const rules = document.querySelector('#checkin-permit .permit-rules');
-  if (rules) rules.scrollTop = 0;
+  if (rules) {
+    rules.scrollTop = 0;
+    attachScrollGate(rules, () => {
+      document.getElementById('permit-check-rules').disabled = false;
+      document.getElementById('permit-check-ptw').disabled = false;
+      group.style.opacity = '1';
+      group.style.pointerEvents = 'auto';
+      document.getElementById('permit-scroll-hint').style.display = 'none';
+    });
+  }
 }
 
 function updatePermitButton() {
@@ -1242,9 +1273,46 @@ function showHsrulesStep() {
   document.getElementById('checkin-step2').style.display = 'none';
   document.getElementById('checkin-hsrules').style.display = 'block';
   document.getElementById('hsrules-check').checked = false;
+  document.getElementById('hsrules-check').disabled = true;
   document.getElementById('hsrules-complete-btn').disabled = true;
+  const group = document.getElementById('hsrules-checkbox-group');
+  group.style.opacity = '0.5';
+  group.style.pointerEvents = 'none';
+  document.getElementById('hsrules-scroll-hint').style.display = 'block';
   const rules = document.querySelector('#checkin-hsrules .permit-rules');
-  if (rules) rules.scrollTop = 0;
+  if (rules) {
+    rules.scrollTop = 0;
+    attachScrollGate(rules, () => {
+      document.getElementById('hsrules-check').disabled = false;
+      group.style.opacity = '1';
+      group.style.pointerEvents = 'auto';
+      document.getElementById('hsrules-scroll-hint').style.display = 'none';
+    });
+  }
+}
+
+// Attaches a scroll listener that fires onUnlock() once the user has scrolled
+// near the bottom of the element (or if the content isn't scrollable at all).
+function attachScrollGate(el, onUnlock) {
+  let unlocked = false;
+  const check = () => {
+    if (unlocked) return;
+    const atBottom = (el.scrollTop + el.clientHeight) >= (el.scrollHeight - 8);
+    if (atBottom) {
+      unlocked = true;
+      el.removeEventListener('scroll', check);
+      onUnlock();
+    }
+  };
+  el.addEventListener('scroll', check);
+  // If content fits without scrolling, unlock immediately
+  requestAnimationFrame(() => {
+    if (el.scrollHeight <= el.clientHeight + 8) {
+      unlocked = true;
+      el.removeEventListener('scroll', check);
+      onUnlock();
+    }
+  });
 }
 
 function updateHsrulesButton() {
