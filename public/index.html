@@ -297,7 +297,15 @@
         <button class="btn btn-outline btn-sm" onclick="openCamera()">&#128247; Take / Update Photo *</button>
       </div>
       <div id="checkin-visitor-fields">
-        <div class="form-group"><label>Host (who are you visiting?) *</label><input type="text" id="checkin-host"></div>
+        <div class="form-group" style="position:relative;">
+          <label>Host (who are you visiting?) *</label>
+          <input type="text" id="checkin-host" placeholder="Start typing employee name..." autocomplete="off" oninput="onHostInput()" onfocus="onHostInput()">
+          <input type="hidden" id="checkin-host-id">
+          <div id="checkin-host-results" class="search-results" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:50;margin-top:4px;"></div>
+          <div id="checkin-host-warning" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;background:#fff3cd;color:#7a4f01;border:1px solid #f1c557;font-size:0.9rem;">
+            &#9888; This host is not currently signed in at this site.
+          </div>
+        </div>
         <div class="form-group"><label>Purpose of visit *</label><input type="text" id="checkin-purpose"></div>
       </div>
       <button id="checkin-action-btn" class="btn btn-success btn-lg" style="width:100%;" onclick="onCheckinAction()">Complete Sign In</button>
@@ -1056,6 +1064,10 @@ function resetCheckinFlow() {
   document.getElementById('checkin-hsrules').style.display = 'none';
   document.getElementById('checkin-step3').style.display = 'none';
   document.getElementById('checkin-host').value = '';
+  document.getElementById('checkin-host-id').value = '';
+  document.getElementById('checkin-host-results').style.display = 'none';
+  document.getElementById('checkin-host-results').innerHTML = '';
+  document.getElementById('checkin-host-warning').style.display = 'none';
   document.getElementById('checkin-purpose').value = '';
   document.getElementById('permit-check-rules').checked = false;
   document.getElementById('permit-check-ptw').checked = false;
@@ -1136,6 +1148,54 @@ function showCheckinStep2() {
   else actionBtn.textContent = 'Complete Sign In';
 }
 
+// Host typeahead — search employees and check on-site status
+let _hostSearchTimer;
+async function onHostInput() {
+  const q = document.getElementById('checkin-host').value.trim().toLowerCase();
+  // Clear stored host id whenever the user edits the text
+  document.getElementById('checkin-host-id').value = '';
+  document.getElementById('checkin-host-warning').style.display = 'none';
+  const results = document.getElementById('checkin-host-results');
+  clearTimeout(_hostSearchTimer);
+  if (q.length < 1) { results.style.display = 'none'; results.innerHTML = ''; return; }
+  _hostSearchTimer = setTimeout(async () => {
+    const people = await idbGetAll('people');
+    const matches = people
+      .filter(p => p.type === 'employee')
+      .filter(p => `${p.first_name} ${p.last_name}`.toLowerCase().includes(q))
+      .slice(0, 8);
+    if (!matches.length) {
+      results.innerHTML = '<div style="padding:12px 16px;color:var(--text-light);">No matching employees</div>';
+      results.style.display = 'block';
+      return;
+    }
+    results.innerHTML = matches.map(m => {
+      const avatar = m.photo
+        ? `<div class="avatar"><img src="${m.photo}" alt=""></div>`
+        : `<div class="avatar">${(m.first_name[0] + m.last_name[0]).toUpperCase()}</div>`;
+      return `<div class="search-result" onclick="selectHost('${m.id}')">
+        ${avatar}
+        <div><div class="name">${escHtml(m.first_name)} ${escHtml(m.last_name)}</div>
+        ${m.company ? `<div class="meta">${escHtml(m.company)}</div>` : ''}</div>
+      </div>`;
+    }).join('');
+    results.style.display = 'block';
+  }, 150);
+}
+
+async function selectHost(id) {
+  const people = await idbGetAll('people');
+  const person = people.find(p => p.id === id);
+  if (!person) return;
+  document.getElementById('checkin-host').value = `${person.first_name} ${person.last_name}`;
+  document.getElementById('checkin-host-id').value = person.id;
+  document.getElementById('checkin-host-results').style.display = 'none';
+  // Check whether this employee is currently signed in at the current location
+  const visits = await idbGetAll('visits');
+  const onSite = visits.some(v => v.person_id === person.id && v.location_id === currentLocation.id && !v.check_out);
+  document.getElementById('checkin-host-warning').style.display = onSite ? 'none' : 'block';
+}
+
 // Routes the step-2 button by type, validating mandatory fields first
 function onCheckinAction() {
   if (!currentPerson) return;
@@ -1146,9 +1206,9 @@ function onCheckinAction() {
   }
   // Host + purpose mandatory for visitors and contractors
   if (currentPerson.type !== 'employee') {
-    const host = document.getElementById('checkin-host').value.trim();
+    const hostId = document.getElementById('checkin-host-id').value;
     const purpose = document.getElementById('checkin-purpose').value.trim();
-    if (!host) { toast('Host is required', 'error'); document.getElementById('checkin-host').focus(); return; }
+    if (!hostId) { toast('Please choose a host from the list', 'error'); document.getElementById('checkin-host').focus(); return; }
     if (!purpose) { toast('Purpose of visit is required', 'error'); document.getElementById('checkin-purpose').focus(); return; }
   }
   if (currentPerson.type === 'contractor') showPermitStep();
@@ -1274,6 +1334,7 @@ async function completeCheckin() {
     check_in: nowISO(),
     check_out: null,
     host: document.getElementById('checkin-host').value.trim(),
+    host_id: document.getElementById('checkin-host-id').value || null,
     purpose: document.getElementById('checkin-purpose').value.trim()
   };
   // Record contractor permit / visitor H&S acknowledgement
